@@ -2602,6 +2602,25 @@ body {
   transform: none;
 }
 
+/* Desktop: lift logo so the emblem sits clear of “SHOVELER” */
+@media (min-width: 992px) {
+  .blog-single .blog-single-author.shoveler-blog-author {
+    align-items: flex-start;
+  }
+
+  .blog-single .shoveler-blog-author .media-img {
+    margin-top: -0.65rem;
+  }
+
+  .blog-single .shoveler-blog-author .media-img img {
+    transform: translateY(-0.5rem);
+  }
+
+  .blog-single .shoveler-blog-author .media-body {
+    padding-top: 0.35rem;
+  }
+}
+
 /* Blog comments — text only, no avatar photos */
 .blog-single .vs-comments-wrap.shoveler-comments .comment-avater {
   display: none !important;
