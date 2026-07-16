@@ -312,6 +312,10 @@ body.shoveler-home .shoveler-home-toggle {
   height: 100%;
 }
 
+.shoveler-hero__slider--mobile {
+  display: none;
+}
+
 .shoveler-hero__slider .swiper-slide {
   height: 100%;
   overflow: hidden;
@@ -443,6 +447,17 @@ body.shoveler-home .shoveler-home-toggle {
   line-height: 1.7;
   color: rgba(244, 239, 228, 0.78);
   animation: shovelerHeroIn 1.15s 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.shoveler-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+}
+
+.shoveler-hero__wa {
+  display: none;
 }
 
 .shoveler-hero__link {
@@ -848,75 +863,210 @@ body.shoveler-home .shoveler-home-toggle {
 }
 
 @media (max-width: 767px) {
+  /* Cinematic overlay — photo full-bleed, type floating in the light */
   .shoveler-hero {
     --hero-nav: 4.25rem;
-    --hero-pad-x: 1rem;
+    --hero-pad-x: 1.2rem;
+    position: relative;
+    height: 100svh;
+    min-height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
+    background: #0a0c0a;
+  }
+
+  .shoveler-hero__slider--desktop {
+    display: none !important;
+  }
+
+  .shoveler-hero__slider--mobile {
+    display: block !important;
+  }
+
+  .shoveler-hero__slider,
+  .shoveler-hero__veil {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .shoveler-hero__slider .swiper-wrapper,
+  .shoveler-hero__slider .swiper-slide {
+    height: 100% !important;
+  }
+
+  .shoveler-hero__slider .swiper-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 42%;
+    transform: scale(1.04);
+  }
+
+  .shoveler-hero__slider .swiper-slide-active img {
+    transform: scale(1);
+  }
+
+  /* Keep the wildlife visible — soft sky, deep ground for type */
+  .shoveler-hero__veil {
+    z-index: 1;
+    background:
+      radial-gradient(
+        90% 55% at 70% 28%,
+        transparent 0%,
+        rgba(8, 10, 8, 0.18) 70%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(8, 10, 8, 0.45) 0%,
+        rgba(8, 10, 8, 0.05) 32%,
+        rgba(8, 10, 8, 0.2) 58%,
+        rgba(8, 10, 8, 0.82) 100%
+      );
+  }
+
+  .shoveler-quote {
+    display: none !important;
   }
 
   .shoveler-hero__content {
-    gap: 0.75rem;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
+    gap: 0;
+    min-height: 100svh;
+    height: 100%;
+    padding:
+      calc(var(--hero-nav) + env(safe-area-inset-top, 0px) + 0.5rem)
+      max(var(--hero-pad-x), env(safe-area-inset-right, 0px))
+      max(1.4rem, env(safe-area-inset-bottom, 0px))
+      max(var(--hero-pad-x), env(safe-area-inset-left, 0px));
+    background: transparent;
+  }
+
+  .shoveler-hero__main {
+    margin-top: 0;
+    gap: 0;
   }
 
   .shoveler-hero__copy {
+    position: relative;
     width: 100%;
+    padding-left: 0.85rem;
+  }
+
+  .shoveler-hero__copy::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    width: 2px;
+    background: linear-gradient(
+      180deg,
+      rgba(184, 149, 62, 0.95) 0%,
+      rgba(184, 149, 62, 0.15) 100%
+    );
   }
 
   .shoveler-hero__brand {
-    font-size: clamp(2.4rem, 11vw, 3.2rem);
-    margin-bottom: 0.15rem;
+    font-size: clamp(3rem, 14vw, 4rem);
+    line-height: 0.9;
+    margin-bottom: 0;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 28px rgba(0, 0, 0, 0.45);
   }
 
   .shoveler-hero__mark {
-    letter-spacing: 0.26em;
-    margin: 0.3rem 0 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.45rem 0 0.85rem;
+    letter-spacing: 0.32em;
+    text-shadow: 0 1px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .shoveler-hero__mark::after {
+    content: "";
+    display: block;
+    width: 2.75rem;
+    height: 1px;
+    background: rgba(184, 149, 62, 0.85);
+    box-shadow: 0 0 12px rgba(184, 149, 62, 0.35);
   }
 
   .shoveler-hero__headline {
-    max-width: none;
-    margin-bottom: 0.45rem;
-    font-size: clamp(1.15rem, 4.2vw, 1.45rem);
+    max-width: 14ch;
+    margin-bottom: 0.55rem;
+    font-size: clamp(1.35rem, 5.2vw, 1.75rem);
+    line-height: 1.15;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
   }
 
   .shoveler-hero__lede {
-    max-width: 34ch;
-    margin-bottom: 0.55rem;
+    max-width: 28ch;
+    margin-bottom: 1.1rem;
     font-size: 0.9rem;
     line-height: 1.45;
+    color: rgba(244, 239, 228, 0.78);
+    text-shadow: 0 1px 14px rgba(0, 0, 0, 0.45);
+  }
+
+  .shoveler-hero__actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
   }
 
   .shoveler-hero__link {
-    min-height: 2.35rem;
-    padding: 0.2rem 0;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 2.6rem;
+    padding: 0.55rem 1.15rem;
+    border: 1px solid rgba(184, 149, 62, 0.9);
+    background: rgba(184, 149, 62, 0.92);
+    color: #121612 !important;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none !important;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  }
+
+  .shoveler-hero__link::after {
+    display: none;
+  }
+
+  .shoveler-hero__wa {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 2.6rem;
+    padding: 0.55rem 1.05rem;
+    border: 1px solid rgba(244, 239, 228, 0.35);
+    background: rgba(12, 14, 12, 0.28);
+    color: #f4efe4 !important;
+    font-family: "Source Sans 3", "Segoe UI", sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   .shoveler-hero__foot {
     display: none;
-  }
-
-  .shoveler-quote {
-    width: 100%;
-    max-width: none;
-    order: 2;
-  }
-
-  .shoveler-hero__main {
-    order: 1;
-  }
-
-  .shoveler-hero__veil {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(8, 10, 8, 0.5) 0%,
-        rgba(8, 10, 8, 0.16) 30%,
-        rgba(8, 10, 8, 0.5) 62%,
-        rgba(8, 10, 8, 0.9) 100%
-      );
-  }
-
-  .shoveler-hero__slider .swiper-slide img {
-    object-position: center 28%;
   }
 
   .title-area {
@@ -939,18 +1089,6 @@ body.shoveler-home .shoveler-home-toggle {
 
   .shoveler-hero__lede {
     display: none;
-  }
-
-  .shoveler-quote {
-    padding: 0.8rem 0.85rem 0.75rem;
-    gap: 0.35rem;
-  }
-
-  .shoveler-quote__field,
-  .shoveler-quote__field select,
-  .shoveler-quote__field input {
-    min-height: 2.35rem;
-    height: 2.35rem;
   }
 }
 
@@ -2425,16 +2563,6 @@ body {
     font-size: clamp(1.85rem, 8vw, 2.5rem);
   }
 
-  /* Keep booking fields comfortable on phones */
-  .shoveler-quote__title {
-    font-size: 1.2rem;
-    max-width: 12ch;
-  }
-
-  .shoveler-quote__avatar {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
 }
 
 @media (min-width: 768px) and (max-width: 991px) {
@@ -2453,4 +2581,44 @@ body {
   .shoveler-dest-card {
     height: 340px;
   }
+}
+
+/* Blog author — no yellow circular frame around logo */
+.blog-single .blog-single-author.shoveler-blog-author .media-img,
+.blog-single .shoveler-blog-author .media-img {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent;
+  width: 120px;
+  height: auto;
+  overflow: visible;
+}
+
+.blog-single .shoveler-blog-author .media-img img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  transform: none;
+}
+
+/* Blog comments — text only, no avatar photos */
+.blog-single .vs-comments-wrap.shoveler-comments .comment-avater {
+  display: none !important;
+}
+
+.blog-single .vs-comments-wrap.shoveler-comments .vs-post-comment-inner {
+  display: block;
+}
+
+.blog-single .vs-comments-wrap.shoveler-comments .comment-content {
+  width: 100%;
+}
+
+.blog-single .vs-comments-wrap.shoveler-comments .reply_and_edit {
+  margin-left: 0;
+}
+
+.blog-single .vs-comments-wrap.shoveler-comments .children {
+  margin-left: 1.5rem;
 }

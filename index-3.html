@@ -22,7 +22,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
-    <!-- Favicons - Place favicon.ico in the root directory -->
+    <!-- Favicons — SHOVELER SAFARI logo -->
+    <link rel="icon" href="assets/img/favicons/favicon.ico" sizes="any" />
+    <link rel="shortcut icon" href="favicon.ico" />
     <link
       rel="apple-touch-icon"
       sizes="57x57"
@@ -87,12 +89,12 @@
       href="assets/img/favicons/favicon-16x16.png"
     />
     <link rel="manifest" href="assets/img/favicons/manifest.json" />
-    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="msapplication-TileColor" content="#000000" />
     <meta
       name="msapplication-TileImage"
       content="assets/img/favicons/ms-icon-144x144.png"
     />
-    <meta name="theme-color" content="#fff" />
+    <meta name="theme-color" content="#000000" />
     <!--=================
 	  Google Fonts
 	================= -->
@@ -358,13 +360,10 @@
 
       <!--================= Hero Area Start =================-->
       <section class="z-index-common shoveler-hero" aria-label="SHOVELER SAFARI">
-        <div class="swiper shoveler-hero__slider" aria-hidden="true">
+        <div class="swiper shoveler-hero__slider shoveler-hero__slider--desktop" aria-hidden="true">
           <div class="swiper-wrapper">
             <div class="swiper-slide">
               <img src="assets/img/client/hero-01.jpg" alt="" />
-            </div>
-            <div class="swiper-slide">
-              <img src="assets/img/client/hero-02.jpg" alt="" />
             </div>
             <div class="swiper-slide">
               <img src="assets/img/client/hero-03.jpg" alt="" />
@@ -387,6 +386,21 @@
           </div>
         </div>
 
+        <div class="swiper shoveler-hero__slider shoveler-hero__slider--mobile" aria-hidden="true">
+          <div class="swiper-wrapper">
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m-attach-01.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m-attach-02.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m-attach-03.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m01.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m02.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m03.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m04.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m05.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m07.jpg" alt="" /></div>
+            <div class="swiper-slide"><img src="assets/img/client/mobile-hero/m08.jpg" alt="" /></div>
+          </div>
+        </div>
+
         <div class="shoveler-hero__veil" aria-hidden="true"></div>
 
         <div class="shoveler-hero__content">
@@ -398,7 +412,15 @@
               <p class="shoveler-hero__lede">
                 Expert-led Northern Circuit safaris from Arusha — wildlife, birdlife, your pace.
               </p>
-              <a href="trips.html" class="shoveler-hero__link">Explore safaris</a>
+              <div class="shoveler-hero__actions">
+                <a href="trips.html" class="shoveler-hero__link">Explore safaris</a>
+                <a
+                  href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote."
+                  class="shoveler-hero__wa"
+                  target="_blank"
+                  rel="noopener"
+                >WhatsApp quote</a>
+              </div>
             </div>
 
             <div class="shoveler-hero__foot" aria-hidden="true">
@@ -407,7 +429,7 @@
               </div>
               <div class="shoveler-hero__index">
                 <span class="shoveler-hero__current">01</span>
-                <span class="shoveler-hero__total">08</span>
+                <span class="shoveler-hero__total">07</span>
               </div>
             </div>
           </div>
@@ -1947,37 +1969,56 @@
     <script src="assets/js/main.js"></script>
     <script>
       (function () {
-        var el = document.querySelector(".shoveler-hero__slider");
-        if (!el || typeof Swiper === "undefined") return;
+        if (typeof Swiper === "undefined") return;
 
         var current = document.querySelector(".shoveler-hero__current");
         var fill = document.querySelector(".shoveler-hero__line-fill");
         var totalEl = document.querySelector(".shoveler-hero__total");
-        var totalSlides = el.querySelectorAll(".swiper-slide").length;
 
-        if (totalEl) totalEl.textContent = String(totalSlides).padStart(2, "0");
+        function initHeroSlider(el) {
+          if (!el) return null;
+          var totalSlides = el.querySelectorAll(".swiper-slide").length;
+          if (totalEl) totalEl.textContent = String(totalSlides).padStart(2, "0");
 
-        function setProgress(swiper) {
-          var idx = (swiper.realIndex || 0) + 1;
-          if (current) current.textContent = String(idx).padStart(2, "0");
-          if (fill) fill.style.transform = "scaleX(" + idx / totalSlides + ")";
+          function setProgress(swiper) {
+            var idx = (swiper.realIndex || 0) + 1;
+            if (current) current.textContent = String(idx).padStart(2, "0");
+            if (fill) fill.style.transform = "scaleX(" + idx / totalSlides + ")";
+          }
+
+          return new Swiper(el, {
+            effect: "fade",
+            fadeEffect: { crossFade: true },
+            loop: true,
+            speed: 1800,
+            autoplay: {
+              delay: 5600,
+              disableOnInteraction: false,
+            },
+            allowTouchMove: true,
+            on: {
+              init: setProgress,
+              slideChange: setProgress,
+            },
+          });
         }
 
-        new Swiper(el, {
-          effect: "fade",
-          fadeEffect: { crossFade: true },
-          loop: true,
-          speed: 1800,
-          autoplay: {
-            delay: 5600,
-            disableOnInteraction: false,
-          },
-          allowTouchMove: true,
-          on: {
-            init: setProgress,
-            slideChange: setProgress,
-          },
-        });
+        var desktopEl = document.querySelector(".shoveler-hero__slider--desktop");
+        var mobileEl = document.querySelector(".shoveler-hero__slider--mobile");
+        var mq = window.matchMedia("(max-width: 767px)");
+        var activeSwiper = null;
+
+        function bootHero() {
+          if (activeSwiper && activeSwiper.destroy) {
+            activeSwiper.destroy(true, true);
+            activeSwiper = null;
+          }
+          activeSwiper = initHeroSlider(mq.matches ? mobileEl : desktopEl);
+        }
+
+        bootHero();
+        if (mq.addEventListener) mq.addEventListener("change", bootHero);
+        else if (mq.addListener) mq.addListener(bootHero);
 
         var form = document.getElementById("hero-quote");
         if (form) {
