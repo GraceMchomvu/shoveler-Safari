@@ -1,0 +1,357 @@
+/* ---- Activities page ---- */
+.act-page-intro {
+  background:
+    radial-gradient(ellipse at 18% 15%, rgba(184, 149, 62, 0.12), transparent 48%),
+    radial-gradient(ellipse at 90% 85%, rgba(45, 74, 43, 0.1), transparent 52%),
+    #f7f5f0;
+}
+
+.act-page-intro .sec-title {
+  max-width: 20ch;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.act-page-intro__text {
+  max-width: 38rem;
+  color: #5a635c;
+  font-size: 1.08rem;
+  line-height: 1.75;
+}
+
+.act-page-intro__text + .act-page-intro__text {
+  margin-top: 1rem;
+}
+
+.act-side-title {
+  font-family: var(--title-font) !important;
+  font-size: 1.85rem !important;
+  font-weight: 600 !important;
+  color: var(--title-color) !important;
+  max-width: none !important;
+  margin: 0 0 1rem !important;
+  line-height: 1.2 !important;
+}
+
+.act-side-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.act-side-list li {
+  position: relative;
+  padding-left: 1.15rem;
+  color: var(--third-theme-color);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.act-side-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.45rem;
+  height: 0.45rem;
+  background: var(--theme-color);
+}
+
+.act-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1.75rem;
+}
+
+.act-jump a {
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(45, 74, 43, 0.22);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--third-theme-color) !important;
+  font-family: var(--body-font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none !important;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.act-jump a:hover {
+  background: var(--third-theme-color);
+  border-color: var(--third-theme-color);
+  color: #fff !important;
+}
+
+.act-feature {
+  background: #121612;
+  color: #fff;
+  overflow: hidden;
+}
+
+.act-feature .sec-subtitle {
+  color: var(--theme-color) !important;
+}
+
+.act-feature .sec-title {
+  max-width: 16ch;
+  margin-left: 0;
+  color: #fff !important;
+}
+
+.act-feature__text {
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.act-feature__list {
+  list-style: none;
+  padding: 0;
+  margin: 1.35rem 0 1.75rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.act-feature__list li {
+  position: relative;
+  padding-left: 1.15rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.act-feature__list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.45rem;
+  height: 0.45rem;
+  background: var(--theme-color);
+}
+
+.act-feature__media {
+  position: relative;
+  min-height: 380px;
+  overflow: hidden;
+}
+
+.act-feature__media img {
+  width: 100%;
+  height: 100%;
+  min-height: 380px;
+  object-fit: cover;
+}
+
+.act-feature__badge {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 2;
+  padding: 0.45rem 0.85rem;
+  background: rgba(18, 22, 18, 0.78);
+  border: 1px solid rgba(184, 149, 62, 0.55);
+  color: var(--theme-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.act-catalog {
+  background: #fff;
+}
+
+.act-catalog .sec-title {
+  max-width: none;
+}
+
+.act-catalog__lead {
+  max-width: 36rem;
+  margin: 0.75rem auto 0;
+  color: #5a635c;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.act-card {
+  scroll-margin-top: 110px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f7f5f0;
+  overflow: hidden;
+}
+
+.act-card__media {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+}
+
+.act-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s ease;
+}
+
+.act-card:hover .act-card__media img {
+  transform: scale(1.06);
+}
+
+.act-card__tag {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  padding: 0.35rem 0.7rem;
+  background: rgba(18, 22, 18, 0.78);
+  color: var(--theme-color);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.act-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 1.5rem 1.35rem 1.6rem;
+}
+
+.act-card__body h3 {
+  font-family: var(--title-font) !important;
+  font-size: 1.75rem !important;
+  font-weight: 600 !important;
+  color: var(--title-color) !important;
+  margin: 0 0 0.75rem !important;
+  line-height: 1.15 !important;
+}
+
+.act-card__body p {
+  margin: 0 0 1.15rem;
+  color: #5a635c;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  flex: 1;
+}
+
+.act-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.act-card__meta li {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--third-theme-color);
+}
+
+.act-card__meta li + li::before {
+  content: "·";
+  margin-right: 1rem;
+  color: var(--theme-color);
+}
+
+.act-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.act-how {
+  background: #f7f5f0;
+}
+
+.act-how .sec-title {
+  max-width: none;
+}
+
+.act-how__step {
+  height: 100%;
+  padding: 1.75rem 1.5rem;
+  background: #fff;
+  border-top: 3px solid var(--theme-color);
+}
+
+.act-how__num {
+  display: inline-block;
+  margin-bottom: 0.85rem;
+  font-family: var(--title-font);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--theme-color);
+}
+
+.act-how__step h3 {
+  font-family: var(--title-font) !important;
+  font-size: 1.55rem !important;
+  font-weight: 600 !important;
+  margin: 0 0 0.65rem !important;
+  color: var(--title-color) !important;
+}
+
+.act-how__step p {
+  margin: 0;
+  color: #5a635c;
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+.act-page-cta {
+  position: relative;
+  overflow: hidden;
+}
+
+.act-page-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(18, 22, 18, 0.88) 0%,
+    rgba(45, 74, 43, 0.72) 55%,
+    rgba(18, 22, 18, 0.55) 100%
+  );
+  z-index: 1;
+}
+
+.act-page-cta .container {
+  position: relative;
+  z-index: 2;
+}
+
+.act-page-cta .sec-title {
+  max-width: 18ch;
+  color: #fff !important;
+  margin-left: 0;
+}
+
+.act-page-cta p {
+  max-width: 32rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.05rem;
+}
+
+@media (max-width: 767px) {
+  .act-feature__media,
+  .act-feature__media img {
+    min-height: 280px;
+  }
+
+  .act-card__media {
+    height: 210px;
+  }
+}
