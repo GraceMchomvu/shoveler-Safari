@@ -134,20 +134,23 @@
           <a href="index.html"
             ><img src="assets/img/shoveler-logo.png" alt="SHOVELER SAFARI" class="logo"
           /></a>
-          <button class="vs-menu-toggle"><i class="fal fa-times"></i></button>
+          <button class="vs-menu-toggle" type="button" aria-label="Close menu">
+            <i class="fal fa-times"></i>
+          </button>
         </div>
         <div class="vs-mobile-menu">
-          
-              <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="about.html">About</a></li>
-                <li><a href="destinations.html">Destinations</a></li>
-                <li><a href="trips.html">Safaris</a></li>
-                <li><a href="activities.html">Activities</a></li>
-                <li><a href="faq.html">FAQ</a></li>
-                <li><a href="contact.html">Contact</a></li>
-              </ul>
-
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="destinations.html">Destinations</a></li>
+            <li><a href="trips.html">Safaris</a></li>
+            <li><a href="activities.html">Activities</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">Contact</a></li>
+          </ul>
+          <a href="contact.html" class="vs-btn style10 shoveler-mobile-quote">
+            <span>Request a Quote</span>
+          </a>
         </div>
       </div>
     </div>
@@ -172,20 +175,19 @@
     ================= -->
     <div id="navbars" class="header-sticky navbars">
       <div class="container custom-container">
-        <div class="row justify-content-between align-items-center">
-          <div class="col-auto col-lg-2">
-            <button class="vs-menu-toggle d-inline-block d-lg-none">
-              <i class="fal fa-bars"></i>
-            </button>
-            <div class="logo d-none d-lg-block">
-              <a href="index.html"
-                ><img src="assets/img/shoveler-logo.png" alt="SHOVELER SAFARI" class="logo"
-              /></a>
-            </div>
+        <div class="row shoveler-nav-row align-items-center justify-content-between">
+          <div class="col-auto shoveler-nav-brand">
+            <a href="index.html" class="shoveler-nav-brand__link">
+              <img
+                src="assets/img/shoveler-logo.png"
+                alt="SHOVELER SAFARI"
+                class="logo"
+              />
+            </a>
           </div>
-          <div class="col-xl-auto col-lg-auto col-sm-3 d-none d-sm-block">
+
+          <div class="col-auto shoveler-nav-end d-flex align-items-center">
             <nav class="main-menu d-none d-lg-block">
-              
               <ul class="d-flex justify-content-center align-items-center">
                 <li><a href="index.html">Home</a></li>
                 <li><a href="about.html">About</a></li>
@@ -195,17 +197,14 @@
                 <li><a href="faq.html">FAQ</a></li>
                 <li><a href="contact.html">Contact</a></li>
               </ul>
-
             </nav>
-            <div class="logo d-lg-none">
-              <a href="index.html"
-                ><img src="assets/img/shoveler-logo.png" alt="SHOVELER SAFARI" class="logo"
-              /></a>
-            </div>
-          </div>
-          <div class="col-xl-3 col-md-auto col-auto">
-            <div class="header-wc style2">
-              <button class="wc-link2 searchBoxTggler text-title-color">
+
+            <div class="header-wc style2 shoveler-nav-tools">
+              <button
+                class="wc-link2 searchBoxTggler text-title-color"
+                type="button"
+                aria-label="Search"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="21"
@@ -215,16 +214,18 @@
                 >
                   <path
                     d="M20.4174 16.6954L17.2213 13.4773C19.3155 10.0703 18.8936 5.54217 15.9593 2.58766C12.5328 -0.862552 6.9769 -0.862552 3.55037 2.58766C0.123835 6.03787 0.123835 11.6322 3.55037 15.0824C6.5354 18.088 11.1341 18.4736 14.5333 16.2469L17.7019 19.4335C18.4521 20.1888 19.6711 20.1888 20.4213 19.4335C21.1675 18.6781 21.1675 17.4507 20.4174 16.6954ZM5.711 12.9029C3.48395 10.6604 3.48395 7.00959 5.711 4.76715C7.93805 2.52471 11.5638 2.52471 13.7909 4.76715C16.018 7.00959 16.018 10.6604 13.7909 12.9029C11.5638 15.1453 7.93805 15.1453 5.711 12.9029Z"
-                    fill="#F6F5F5"
+                    fill="#1a1f1a"
                   ></path>
                 </svg>
               </button>
               <svg
+                class="shoveler-nav-divider d-none d-lg-block"
                 xmlns="http://www.w3.org/2000/svg"
                 width="6"
                 height="39"
                 viewBox="0 0 6 39"
                 fill="none"
+                aria-hidden="true"
               >
                 <rect
                   x="5"
@@ -241,16 +242,16 @@
                   fill-opacity="0.7"
                 ></rect>
               </svg>
-              <div class="logo d-none d-sm-block">
-                <a href="contact.html" class="vs-btn style10">
-                  <span>Request a Quote</span>
-                </a>
-              </div>
-              <div class="logo d-sm-none">
-                <a href="index.html"
-                  ><img src="assets/img/shoveler-logo.png" alt="SHOVELER SAFARI" class="logo"
-                /></a>
-              </div>
+              <a href="contact.html" class="vs-btn style10 d-none d-lg-inline-flex">
+                <span>Request a Quote</span>
+              </a>
+              <button
+                class="vs-menu-toggle d-inline-flex d-lg-none"
+                type="button"
+                aria-label="Open menu"
+              >
+                <i class="fal fa-bars"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -267,7 +268,7 @@
           <div class="header-bottom">
             <div class="container custom-container">
               <div class="row justify-content-between align-items-center">
-                <div class="col-xl-3 col-lg-auto">
+                <div class="col-12 col-lg-auto shoveler-nav-brand-col">
                   <div
                     class="header-logo d-flex justify-content-between align-items-center"
                   >
@@ -277,8 +278,12 @@
                         alt="SHOVELER SAFARI"
                         class="logo"
                     /></a>
-                    <div class="d-flex align-items-center gap-3">
-                      <button class="wc-link2 searchBoxTggler d-lg-none">
+                    <div class="d-flex align-items-center gap-2 shoveler-nav-mobile-actions">
+                      <button
+                        class="wc-link2 searchBoxTggler d-lg-none"
+                        type="button"
+                        aria-label="Search"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="21"
@@ -293,7 +298,9 @@
                         </svg>
                       </button>
                       <button
-                        class="vs-menu-toggle style2 d-inline-block d-lg-none"
+                        class="vs-menu-toggle style2 d-inline-flex d-lg-none"
+                        type="button"
+                        aria-label="Open menu"
                       >
                         <i class="fal fa-bars"></i>
                       </button>
@@ -1513,7 +1520,7 @@
                       <i class="fa-solid fa-share-nodes"></i>
                       <ul class="custom-ul">
                         <li>
-                          <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank" rel="noopener">
+                          <a href="https://www.facebook.com/share/1JNNS8g8yz/" target="_blank" rel="noopener">
                             <i class="fa-brands fa-facebook-f"></i>
                           </a>
                         </li>
@@ -1523,7 +1530,7 @@
                           </a>
                         </li>
                         <li>
-                          <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank">
+                          <a href="https://www.instagram.com/shovelersafari/" target="_blank">
                             <i class="fa-brands fa-instagram"></i>
                           </a>
                         </li>
@@ -1576,7 +1583,7 @@
                       <i class="fa-solid fa-share-nodes"></i>
                       <ul class="custom-ul">
                         <li>
-                          <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank" rel="noopener">
+                          <a href="https://www.facebook.com/share/1JNNS8g8yz/" target="_blank" rel="noopener">
                             <i class="fa-brands fa-facebook-f"></i>
                           </a>
                         </li>
@@ -1586,7 +1593,7 @@
                           </a>
                         </li>
                         <li>
-                          <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank">
+                          <a href="https://www.instagram.com/shovelersafari/" target="_blank">
                             <i class="fa-brands fa-instagram"></i>
                           </a>
                         </li>
@@ -1639,7 +1646,7 @@
                       <i class="fa-solid fa-share-nodes"></i>
                       <ul class="custom-ul">
                         <li>
-                          <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank" rel="noopener">
+                          <a href="https://www.facebook.com/share/1JNNS8g8yz/" target="_blank" rel="noopener">
                             <i class="fa-brands fa-facebook-f"></i>
                           </a>
                         </li>
@@ -1649,7 +1656,7 @@
                           </a>
                         </li>
                         <li>
-                          <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank">
+                          <a href="https://www.instagram.com/shovelersafari/" target="_blank">
                             <i class="fa-brands fa-instagram"></i>
                           </a>
                         </li>
@@ -1736,7 +1743,7 @@
                 <div class="social-media">
                   <ul class="custom-ul">
                     <li>
-                      <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank"
+                      <a href="https://www.facebook.com/share/1JNNS8g8yz/" target="_blank"
                         ><i class="fa-brands fa-facebook-f"></i
                       ></a>
                     </li>
@@ -1746,7 +1753,7 @@
                       ></a>
                     </li>
                     <li>
-                      <a href="https://wa.me/255783591810?text=Hello%20SHOVELER%20SAFARI%2C%20I%20would%20like%20a%20safari%20quote." target="_blank"
+                      <a href="https://www.instagram.com/shovelersafari/" target="_blank"
                         ><i class="fa-brands fa-instagram"></i
                       ></a>
                     </li>
