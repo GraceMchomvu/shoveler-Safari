@@ -1,0 +1,10 @@
+# SHOVELER SAFARI — allow search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Do not waste crawl budget on template/demo/backup pages
+Disallow: /index-2.html
+Disallow: /index-3.html
+Disallow: /index-1-backup.html
+
+Sitemap: https://www.shovelersafari.com/sitemap.xml
