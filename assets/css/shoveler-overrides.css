@@ -246,7 +246,7 @@ body.shoveler-home .vs-header.layout1 {
   flex-shrink: 0;
 }
 
-/* Desktop: logo left, nav truly centered, CTA right */
+/* Desktop: logo left, nav words truly centered, CTA right */
 @media (min-width: 992px) {
   .vs-header .header-bottom .row > :last-child {
     flex: 1 1 auto !important;
@@ -257,18 +257,34 @@ body.shoveler-home .vs-header.layout1 {
     min-width: 0;
   }
 
-  .vs-header .header-bottom .main-menu {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+  .vs-header .header-bottom .main-menu,
+  #navbars .main-menu {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
     z-index: 1;
-    margin: 0;
+    margin: 0 !important;
+    width: max-content;
+    max-width: calc(100% - 22rem);
   }
 
-  .vs-header .header-wc.style2 {
+  .vs-header .header-wc.style2,
+  #navbars .header-wc.style2,
+  #navbars .shoveler-nav-tools {
     margin-left: auto;
     z-index: 2;
+  }
+
+  /* Sticky: keep brand left + tools right; menu floats in the true center */
+  #navbars .shoveler-nav-end {
+    flex: 1 1 auto !important;
+    justify-content: flex-end !important;
+  }
+
+  #navbars .row > .col-xl-auto,
+  #navbars .row > .col-lg-auto {
+    position: static;
   }
 }
 
@@ -736,6 +752,7 @@ body.shoveler-home .shoveler-home-toggle {
 
   #navbars .shoveler-nav-tools {
     gap: 0.75rem !important;
+    margin-left: auto;
   }
 }
 
