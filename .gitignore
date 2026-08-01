@@ -1,36 +1,9 @@
-# Dependencies
-node_modules/
-**/node_modules/
-
-# Secrets & env
-.env
-.env.*
-!.env.example
-cms/.env
-
-# CMS runtime data
-cms/uploads/*
-!cms/uploads/.gitkeep
-cms/backups/*
-!cms/backups/.gitkeep
-cms/prisma/*.db
-cms/prisma/*.db-journal
-cms/client/dist/
-cms/server/dist/
-cms/server/public/*
-!cms/server/public/.gitkeep
-
-# OS / editor
 .DS_Store
 Thumbs.db
 Desktop.ini
-.vscode/
-.idea/
 *.log
 .sass-cache/
+node_modules/
+.vscode/
+.idea/
 .wrangler/
-
-# Local clutter
-photos/
-*.docx
-temp-shoveler-push/
