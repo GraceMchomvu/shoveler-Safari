@@ -3217,51 +3217,70 @@ body {
   font-family: var(--body-font);
 }
 
-/* Admin login — visible labeled button next to search */
-.vs-header .shoveler-admin-btn,
-#navbars .shoveler-admin-btn {
+/* Admin login — always visible (gold pill, not white-on-white) */
+.vs-header a.shoveler-admin-btn,
+#navbars a.shoveler-admin-btn,
+.header-wc a.shoveler-admin-btn {
   display: inline-flex !important;
+  visibility: visible !important;
   align-items: center;
   gap: 0.35rem;
   height: 2.25rem;
-  padding: 0 0.7rem !important;
+  padding: 0 0.75rem !important;
   border-radius: 999px;
-  border: 1px solid rgba(26, 31, 26, 0.18);
-  background: #fff !important;
+  border: 1px solid #9a7a2e !important;
+  background: var(--theme-color, #b8953e) !important;
+  background-color: var(--theme-color, #b8953e) !important;
   color: #1a1f1a !important;
   font-family: var(--body-font) !important;
   font-size: 0.72rem !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: none !important;
   white-space: nowrap;
   opacity: 1 !important;
-  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  box-shadow: 0 1px 2px rgba(18, 22, 18, 0.12);
+  transition: filter 0.2s ease, transform 0.2s ease;
 }
 
-.vs-header .shoveler-admin-btn:hover,
-#navbars .shoveler-admin-btn:hover {
-  color: #fff !important;
-  background: var(--theme-color, #b8953e) !important;
-  border-color: var(--theme-color, #b8953e) !important;
+.vs-header a.shoveler-admin-btn span,
+#navbars a.shoveler-admin-btn span,
+.header-wc a.shoveler-admin-btn span {
+  color: #1a1f1a !important;
+  opacity: 1 !important;
 }
 
-.vs-header .shoveler-admin-btn svg,
-#navbars .shoveler-admin-btn svg {
-  display: block;
+.vs-header a.shoveler-admin-btn:hover,
+#navbars a.shoveler-admin-btn:hover,
+.header-wc a.shoveler-admin-btn:hover {
+  color: #1a1f1a !important;
+  background: #a68432 !important;
+  background-color: #a68432 !important;
+  border-color: #8a6e28 !important;
+  filter: brightness(1.05);
+}
+
+.vs-header a.shoveler-admin-btn svg,
+#navbars a.shoveler-admin-btn svg,
+.header-wc a.shoveler-admin-btn svg {
+  display: block !important;
   width: 0.95rem;
   height: 0.95rem;
   flex-shrink: 0;
+  opacity: 1 !important;
 }
 
-.vs-header .shoveler-admin-btn svg path,
-#navbars .shoveler-admin-btn svg path {
-  fill: currentColor !important;
+.vs-header a.shoveler-admin-btn svg path,
+#navbars a.shoveler-admin-btn svg path,
+.header-wc a.shoveler-admin-btn svg path {
+  fill: #1a1f1a !important;
+  opacity: 1 !important;
 }
 
 .vs-mobile-menu .shoveler-admin-link,
 .footer-menu .shoveler-admin-link {
-  opacity: 1;
-  font-weight: 600 !important;
+  opacity: 1 !important;
+  color: var(--theme-color, #b8953e) !important;
+  font-weight: 700 !important;
 }
