@@ -632,7 +632,7 @@ body.shoveler-home .vs-header.layout1 .header-wc svg rect,
     padding-right: 1rem;
   }
 
-  /* Mobile slide-out drawer */
+  /* Mobile slide-out drawer — light cream, no black logo strip */
   .vs-menu-wrapper .vs-menu-area {
     background: #faf7f1 !important;
     padding: 1.25rem 1.35rem 2rem !important;
@@ -644,21 +644,31 @@ body.shoveler-home .vs-header.layout1 .header-wc svg rect,
     justify-content: space-between !important;
     gap: 1rem;
     margin-bottom: 1.5rem !important;
-    padding-bottom: 1rem;
+    padding: 0.35rem 0 1rem !important;
+    background: transparent !important;
+    background-color: transparent !important;
     border-bottom: 1px solid rgba(184, 149, 62, 0.35);
+    text-align: left !important;
   }
 
   .vs-menu-wrapper .mobile-logo a {
-    display: block;
+    display: inline-flex !important;
+    align-items: center;
     line-height: 0;
+    background: transparent !important;
   }
 
   .vs-menu-wrapper .mobile-logo img.logo {
-    max-height: 64px !important;
-    height: 64px !important;
+    max-height: 56px !important;
+    height: 56px !important;
+    width: auto !important;
+    background: transparent !important;
+    filter: none !important;
+    object-fit: contain;
   }
 
   .vs-menu-wrapper .vs-menu-toggle {
+    position: static !important;
     width: 2.6rem !important;
     height: 2.6rem !important;
     display: inline-flex !important;
@@ -667,6 +677,12 @@ body.shoveler-home .vs-header.layout1 .header-wc svg rect,
     color: #1a1f1a !important;
     background: transparent !important;
     border: 1px solid rgba(26, 31, 26, 0.15) !important;
+    border-radius: 999px !important;
+  }
+
+  .vs-menu-wrapper .vs-menu-toggle:hover {
+    background: transparent !important;
+    color: var(--theme-color) !important;
   }
 
   .vs-mobile-menu ul {
@@ -3283,4 +3299,45 @@ body {
   opacity: 1 !important;
   color: var(--theme-color, #b8953e) !important;
   font-weight: 700 !important;
+}
+
+/* Mobile drawer + search: never use black logo strip / black overlay */
+.vs-menu-wrapper .mobile-logo {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.vs-menu-wrapper .mobile-logo img.logo,
+.vs-menu-wrapper .mobile-logo img {
+  background: transparent !important;
+  filter: none !important;
+}
+
+.popup-search-box {
+  background-color: rgba(250, 247, 241, 0.97) !important;
+}
+
+.popup-search-box form input {
+  color: #1a1f1a !important;
+  background-color: #fff !important;
+  border-color: var(--theme-color, #b8953e) !important;
+}
+
+.popup-search-box form input::placeholder,
+.popup-search-box form input::-webkit-input-placeholder {
+  color: #6b726b !important;
+}
+
+.popup-search-box form button {
+  color: #1a1f1a !important;
+}
+
+.popup-search-box button.searchClose {
+  background-color: var(--theme-color, #b8953e) !important;
+  color: #1a1f1a !important;
+}
+
+.popup-search-box button.searchClose:hover {
+  background-color: #1a1f1a !important;
+  color: #fff !important;
 }
