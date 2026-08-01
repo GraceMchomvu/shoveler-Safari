@@ -45,10 +45,13 @@ function stripAdminAnchors(html) {
 }
 
 function stripAdminListItems(html) {
-  return html.replace(
-    /<li>\s*<a\b[^>]*\bshoveler-admin-link\b[^>]*>\s*Admin(?: login)?\s*<\/a>\s*<\/li>/gi,
-    ""
-  );
+  return html
+    .replace(
+      /<li>\s*<a\b[^>]*\bshoveler-admin-link\b[^>]*>\s*Admin(?: login)?\s*<\/a>\s*<\/li>/gi,
+      ""
+    )
+    // Leftover empty items after anchor-only strip
+    .replace(/<li>\s*<\/li>/gi, "");
 }
 
 function insertAfterSearchButtons(html) {
@@ -62,17 +65,34 @@ function insertAfterSearchButtons(html) {
   );
 }
 
+/** Insert Admin only inside a specific menu block — never across the whole page. */
+function insertAdminInBlock(html, blockPattern, itemHtml) {
+  return html.replace(blockPattern, (block) => {
+    if (block.includes("shoveler-admin-link")) return block;
+    const contactLi = block.match(
+      /<li>\s*<a href="\/contact">Contact<\/a>\s*<\/li>/i
+    );
+    if (!contactLi) return block;
+    return block.replace(
+      contactLi[0],
+      `${contactLi[0]}\n                ${itemHtml}`
+    );
+  });
+}
+
 function insertMobileAdmin(html) {
-  return html.replace(
-    /(<div class="vs-mobile-menu">[\s\S]*?<li><a href="\/contact">Contact<\/a><\/li>)(\s*)(<\/ul>)/i,
-    `$1\n                ${mobileItem}\n              $3`
+  return insertAdminInBlock(
+    html,
+    /<div class="vs-mobile-menu">[\s\S]*?<\/div>/i,
+    mobileItem
   );
 }
 
 function insertFooterAdmin(html) {
-  return html.replace(
-    /(<div class="footer-menu">[\s\S]*?<li><a href="\/contact">Contact<\/a><\/li>)(\s*)(<\/ul>)/i,
-    `$1\n                  ${footerItem}\n                $3`
+  return insertAdminInBlock(
+    html,
+    /<div class="footer-menu">[\s\S]*?<\/div>/i,
+    footerItem
   );
 }
 
@@ -116,6 +136,13 @@ function processRoot(siteRoot) {
     }
     if (!html.includes("vs-header") || !html.includes("shoveler-admin-btn")) {
       console.error(`SKIP ${file}: missing expected markers`);
+      continue;
+    }
+
+    // Guard: Admin list item must not sit inside desktop/sticky main-menu navs
+    const navBlocks = html.match(/<nav class="main-menu[\s\S]*?<\/nav>/gi) || [];
+    if (navBlocks.some((nav) => nav.includes("shoveler-admin-link"))) {
+      console.error(`SKIP ${file}: Admin leaked into desktop main-menu`);
       continue;
     }
 
