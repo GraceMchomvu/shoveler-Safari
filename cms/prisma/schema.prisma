@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  AUTHOR
+  VIEWER
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
+model User {
+  id               String              @id @default(cuid())
+  email            String              @unique
+  name             String
+  passwordHash     String
+  role             Role                @default(AUTHOR)
+  active           Boolean             @default(true)
+  mustChangePassword Boolean           @default(false)
+  twoFactorEnabled Boolean             @default(false)
+  twoFactorSecret  String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  sessions         Session[]
+  resetTokens      PasswordResetToken[]
+  pages            Page[]              @relation("PageAuthor")
+  posts            Post[]              @relation("PostAuthor")
+  comments         Comment[]
+  activityLogs     ActivityLog[]
+  notifications    Notification[]
+  apiKeys          ApiKey[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Page {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  content         String        @default("")
+  excerpt         String?
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  parentId        String?
+  parent          Page?         @relation("PageHierarchy", fields: [parentId], references: [id])
+  children        Page[]        @relation("PageHierarchy")
+  sortOrder       Int           @default(0)
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  ogImage         String?
+  keywords        String?
+  authorId        String?
+  author          User?         @relation("PageAuthor", fields: [authorId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  posts Post[]
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  posts Post[]
+}
+
+model Post {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  content         String        @default("")
+  excerpt         String?
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  featuredImage   String?
+  commentsEnabled Boolean       @default(true)
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  ogImage         String?
+  keywords        String?
+  authorId        String?
+  author          User?         @relation("PostAuthor", fields: [authorId], references: [id])
+  categoryId      String?
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  tags            Tag[]
+  comments        Comment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model MediaFolder {
+  id        String        @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    MediaFolder?  @relation("FolderTree", fields: [parentId], references: [id])
+  children  MediaFolder[] @relation("FolderTree")
+  media     Media[]
+  createdAt DateTime      @default(now())
+}
+
+model Media {
+  id           String       @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  url          String
+  altText      String?
+  folderId     String?
+  folder       MediaFolder? @relation(fields: [folderId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Menu {
+  id        String     @id @default(cuid())
+  name      String
+  location  String     @unique
+  items     MenuItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model MenuItem {
+  id        String     @id @default(cuid())
+  menuId    String
+  menu      Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  label     String
+  url       String?
+  pageId    String?
+  parentId  String?
+  parent    MenuItem?  @relation("MenuTree", fields: [parentId], references: [id])
+  children  MenuItem[] @relation("MenuTree")
+  sortOrder Int        @default(0)
+  openInNew Boolean    @default(false)
+}
+
+model Setting {
+  id    String @id @default("site")
+  data  String @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model Theme {
+  id    String @id @default("default")
+  data  String @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model Form {
+  id          String           @id @default(cuid())
+  name        String
+  slug        String           @unique
+  fields      String           @default("[]")
+  notifyEmail String?
+  captchaEnabled Boolean       @default(false)
+  active      Boolean          @default(true)
+  submissions FormSubmission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  data      String   @default("{}")
+  spam      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  postId    String
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorName String
+  authorEmail String?
+  body      String
+  status    CommentStatus @default(PENDING)
+  parentId  String?
+  parent    Comment?      @relation("CommentThread", fields: [parentId], references: [id])
+  replies   Comment[]     @relation("CommentThread")
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String?
+  entityId  String?
+  meta      String?
+  ip        String?
+  createdAt DateTime @default(now())
+}
+
+model Backup {
+  id        String   @id @default(cuid())
+  filename  String
+  path      String
+  size      Int
+  automatic Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String
+  prefix     String
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lastUsedAt DateTime?
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+}
+
+model AnalyticsSnapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  visitors        Int      @default(0)
+  pageViews       Int      @default(0)
+  bounceRate      Float    @default(0)
+  avgSessionSec   Int      @default(0)
+  devices         String   @default("{}")
+  countries       String   @default("{}")
+  topPages        String   @default("[]")
+  referrals       String   @default("[]")
+  createdAt       DateTime @default(now())
+}

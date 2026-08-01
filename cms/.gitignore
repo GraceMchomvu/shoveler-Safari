@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*
+!.env.example
+*.db
+*.db-journal
+uploads/*
+!uploads/.gitkeep
+backups/*
+!backups/.gitkeep
+.DS_Store
+client/dist/
+server/dist/
+server/public/*
+!server/public/.gitkeep

@@ -1,0 +1,8 @@
+# Prefer www as the canonical host
+https://shovelersafari.com/* https://www.shovelersafari.com/:splat 301
+http://shovelersafari.com/* https://www.shovelersafari.com/:splat 301
+http://www.shovelersafari.com/* https://www.shovelersafari.com/:splat 301
+
+# CMS admin SPA (built into /admin/)
+/admin /admin/index.html 200
+/admin/* /admin/index.html 200
