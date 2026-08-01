@@ -3265,16 +3265,18 @@ body {
   font-family: var(--body-font);
 }
 
-/* Admin login — always visible (gold pill, not white-on-white) */
+/* Admin — text-only gold pill (header / sticky) */
 .vs-header a.shoveler-admin-btn,
 #navbars a.shoveler-admin-btn,
 .header-wc a.shoveler-admin-btn {
   display: inline-flex !important;
   visibility: visible !important;
   align-items: center;
-  gap: 0.35rem;
-  height: 2.25rem;
-  padding: 0 0.75rem !important;
+  justify-content: center;
+  gap: 0;
+  height: 2.15rem;
+  min-height: 2.15rem;
+  padding: 0 0.9rem !important;
   border-radius: 999px;
   border: 1px solid #9a7a2e !important;
   background: var(--theme-color, #b8953e) !important;
@@ -3283,13 +3285,14 @@ body {
   font-family: var(--body-font) !important;
   font-size: 0.72rem !important;
   font-weight: 700 !important;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none !important;
+  line-height: 1 !important;
   white-space: nowrap;
   opacity: 1 !important;
-  box-shadow: 0 1px 2px rgba(18, 22, 18, 0.12);
-  transition: filter 0.2s ease, transform 0.2s ease;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .vs-header a.shoveler-admin-btn span,
@@ -3306,24 +3309,14 @@ body {
   background: #a68432 !important;
   background-color: #a68432 !important;
   border-color: #8a6e28 !important;
-  filter: brightness(1.05);
+  filter: none;
 }
 
+/* Never show lock/icon inside Admin control */
 .vs-header a.shoveler-admin-btn svg,
 #navbars a.shoveler-admin-btn svg,
 .header-wc a.shoveler-admin-btn svg {
-  display: block !important;
-  width: 0.95rem;
-  height: 0.95rem;
-  flex-shrink: 0;
-  opacity: 1 !important;
-}
-
-.vs-header a.shoveler-admin-btn svg path,
-#navbars a.shoveler-admin-btn svg path,
-.header-wc a.shoveler-admin-btn svg path {
-  fill: #1a1f1a !important;
-  opacity: 1 !important;
+  display: none !important;
 }
 
 .vs-mobile-menu .shoveler-admin-link,
@@ -3333,12 +3326,52 @@ body {
   font-weight: 700 !important;
 }
 
-/* Desktop: show Admin in header again */
+/* Sticky bar: never show Admin as a nav word in the center menu */
+#navbars .main-menu a.shoveler-admin-link {
+  display: none !important;
+}
+
+/* Desktop sticky: search + Admin aligned cleanly on the white bar */
 @media (min-width: 992px) {
   .vs-header a.shoveler-admin-btn,
   #navbars a.shoveler-admin-btn,
   .header-wc a.shoveler-admin-btn {
     display: inline-flex !important;
+  }
+
+  #navbars .header-wc.style2,
+  #navbars .shoveler-nav-tools {
+    align-items: center !important;
+    gap: 0.65rem !important;
+  }
+
+  #navbars .wc-link2,
+  #navbars .wc-link2.searchBoxTggler {
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    color: #1a1f1a !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+  }
+
+  #navbars .wc-link2 svg,
+  #navbars .wc-link2.searchBoxTggler svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    display: block;
+  }
+
+  #navbars .wc-link2 svg path,
+  #navbars .wc-link2.searchBoxTggler svg path {
+    fill: #1a1f1a !important;
+  }
+
+  #navbars a.shoveler-admin-btn {
+    height: 2.15rem !important;
+    min-height: 2.15rem !important;
   }
 }
 
