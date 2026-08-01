@@ -53,11 +53,12 @@ function stripAdminListItems(html) {
 }
 
 function insertAfterSearchButtons(html) {
-  // Match a searchBoxTggler button block ending at </button>
+  // Only after desktop/header search toggles — skip mobile-only (d-lg-none)
+  // so Admin is not duplicated next to the logo on desktop hero.
   return html.replace(
     /(<button\b[^>]*\bsearchBoxTggler\b[^>]*>[\s\S]*?<\/button>)(\s*)/gi,
     (full, button, space) => {
-      // Avoid double-insert if admin already follows
+      if (/\bd-lg-none\b/.test(button)) return full;
       return `${button}${adminBtn}${space}`;
     }
   );
