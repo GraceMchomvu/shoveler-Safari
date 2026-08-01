@@ -565,9 +565,7 @@ body.shoveler-home .vs-header.layout1 .header-wc svg rect,
   }
 
   .vs-header .wc-link2,
-  #navbars .wc-link2,
-  .vs-header .vs-menu-toggle,
-  #navbars .vs-menu-toggle {
+  #navbars .wc-link2 {
     width: 2.6rem !important;
     height: 2.6rem !important;
     min-width: 2.6rem;
@@ -583,10 +581,44 @@ body.shoveler-home .vs-header.layout1 .header-wc svg rect,
     padding: 0 !important;
   }
 
+  /* Hamburger — high contrast so it is always obvious on mobile */
+  .vs-header .vs-menu-toggle,
+  #navbars .vs-menu-toggle,
+  .vs-header .vs-menu-toggle.style2,
+  #navbars .vs-menu-toggle.style2 {
+    width: 2.85rem !important;
+    height: 2.85rem !important;
+    min-width: 2.85rem !important;
+    min-height: 2.85rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 0.55rem !important;
+    color: #1a1f1a !important;
+    background: #ffffff !important;
+    border: 2px solid #1a1f1a !important;
+    box-shadow: 0 1px 3px rgba(18, 22, 18, 0.18) !important;
+    padding: 0 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 5;
+  }
+
   .vs-header .vs-menu-toggle i,
-  #navbars .vs-menu-toggle i {
-    font-size: 1.25rem;
-    line-height: 1;
+  #navbars .vs-menu-toggle i,
+  .vs-header .vs-menu-toggle.style2 i,
+  #navbars .vs-menu-toggle.style2 i {
+    font-size: 1.35rem !important;
+    line-height: 1 !important;
+    color: #1a1f1a !important;
+    opacity: 1 !important;
+  }
+
+  /* Keep Admin in footer on small screens — free space for hamburger */
+  .vs-header a.shoveler-admin-btn,
+  #navbars a.shoveler-admin-btn,
+  .header-wc a.shoveler-admin-btn {
+    display: none !important;
   }
 
   .vs-header .wc-link2 svg path,
@@ -3299,6 +3331,15 @@ body {
   opacity: 1 !important;
   color: var(--theme-color, #b8953e) !important;
   font-weight: 700 !important;
+}
+
+/* Desktop: show Admin in header again */
+@media (min-width: 992px) {
+  .vs-header a.shoveler-admin-btn,
+  #navbars a.shoveler-admin-btn,
+  .header-wc a.shoveler-admin-btn {
+    display: inline-flex !important;
+  }
 }
 
 /* Mobile drawer + search: never use black logo strip / black overlay */
