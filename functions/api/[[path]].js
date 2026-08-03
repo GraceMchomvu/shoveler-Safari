@@ -2,7 +2,7 @@
  * Proxies /api/* to the CMS Node API (free host).
  * CMS_API_ORIGIN Cloudflare secret overrides the default.
  */
-const FALLBACK_ORIGIN = "https://informative-club-halifax-decrease.trycloudflare.com";
+const FALLBACK_ORIGIN = "https://chances-organisms-discharge-conversation.trycloudflare.com";
 
 export async function onRequest(context) {
   let origin = (context.env.CMS_API_ORIGIN || FALLBACK_ORIGIN).replace(/\/$/, "");
