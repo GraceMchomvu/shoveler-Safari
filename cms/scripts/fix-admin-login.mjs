@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -31,15 +30,20 @@ process.env.DATABASE_URL = `file:${path.resolve(filePath).replace(/\\/g, "/")}`;
 console.log("DB:", process.env.DATABASE_URL);
 
 const prisma = new PrismaClient();
-const users = await prisma.user.findMany({
-  select: { id: true, email: true, username: true, active: true, mustChangePassword: true, role: true },
-});
-console.log("Users:", users);
+const password = process.env.SEED_ADMIN_PASSWORD || "AdminPass123";
+const email = (process.env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
+const phone = process.env.SEED_ADMIN_PHONE || "+255783591810";
+const passwordHash = await bcrypt.hash(password, 12);
 
-const password = "AdminPass123";
-const email = "victorkiungai@gmail.com";
+const users = await prisma.user.findMany({
+  select: { id: true, email: true, username: true, active: true, role: true },
+});
+console.log("Users before fix:", users);
+
+// Primary admin: username admin + known email/password
 let user = await prisma.user.findFirst({
-  where: { OR: [{ email }, { username: "admin" }] },
+  where: { OR: [{ email }, { username: "admin" }, { email: "admin@shovelersafari.com" }] },
+  orderBy: { createdAt: "asc" },
 });
 
 if (!user) {
@@ -49,8 +53,8 @@ if (!user) {
       email,
       username: "admin",
       name: "Super Admin",
-      phone: "+255783591810",
-      passwordHash: await bcrypt.hash(password, 12),
+      phone,
+      passwordHash,
       role: "SUPER_ADMIN",
       mustChangePassword: true,
       active: true,
@@ -62,12 +66,23 @@ if (!user) {
     data: {
       email,
       username: "admin",
-      passwordHash: await bcrypt.hash(password, 12),
+      phone,
+      passwordHash,
       mustChangePassword: true,
       active: true,
+      role: "SUPER_ADMIN",
     },
   });
 }
+
+// Any other SUPER_ADMIN / seed admin emails get the same password so login never dead-ends
+await prisma.user.updateMany({
+  where: {
+    role: "SUPER_ADMIN",
+    NOT: { id: user.id },
+  },
+  data: { passwordHash, mustChangePassword: true, active: true },
+});
 
 await prisma.session.deleteMany({ where: { userId: user.id } });
 const ok = await bcrypt.compare(password, user.passwordHash);
@@ -80,14 +95,13 @@ fs.writeFileSync(
     `# ${new Date().toISOString()}`,
     "",
     "username: admin",
-    "password: AdminPass123",
+    `password: ${password}`,
     `email (resets only): ${email}`,
     "",
-    "LOCAL: http://localhost:5173/admin/",
-    "LIVE admin UI needs a running CMS API + Cloudflare CMS_API_ORIGIN.",
+    "LIVE: https://www.shovelersafari.com/admin/",
     "",
   ].join("\n")
 );
 
-console.log("Ready — username: admin / password: AdminPass123");
+console.log(`Ready — username: admin / password: ${password}`);
 await prisma.$disconnect();

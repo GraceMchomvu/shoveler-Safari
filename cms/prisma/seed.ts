@@ -14,18 +14,27 @@ function makePassword() {
 }
 
 async function main() {
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || makePassword();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "AdminPass123";
   const editorPassword = process.env.SEED_EDITOR_PASSWORD || makePassword();
   const authorPassword = process.env.SEED_AUTHOR_PASSWORD || makePassword();
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   const adminPhone = process.env.SEED_ADMIN_PHONE || "+255783591810";
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
 
   const admin = await prisma.user.upsert({
-    where: { email: "admin@shovelersafari.com" },
-    update: {},
+    where: { email: adminEmail },
+    update: {
+      username: "admin",
+      passwordHash,
+      phone: adminPhone,
+      mustChangePassword: true,
+      active: true,
+      role: Role.SUPER_ADMIN,
+    },
     create: {
-      email: "admin@shovelersafari.com",
+      email: adminEmail,
+      username: "admin",
       name: "Super Admin",
       phone: adminPhone,
       passwordHash,
@@ -34,9 +43,25 @@ async function main() {
     },
   });
 
+  // Legacy seed email — keep in sync so old bookmarks still work
+  if (adminEmail !== "admin@shovelersafari.com") {
+    await prisma.user.upsert({
+      where: { email: "admin@shovelersafari.com" },
+      update: { passwordHash, username: null, active: true },
+      create: {
+        email: "admin@shovelersafari.com",
+        name: "Super Admin (legacy)",
+        phone: adminPhone,
+        passwordHash,
+        role: Role.SUPER_ADMIN,
+        mustChangePassword: true,
+      },
+    });
+  }
+
   // Ensure admin has a recovery phone for WhatsApp resets
   await prisma.user.updateMany({
-    where: { email: "admin@shovelersafari.com", OR: [{ phone: null }, { phone: "" }] },
+    where: { email: adminEmail, OR: [{ phone: null }, { phone: "" }] },
     data: { phone: adminPhone },
   });
 

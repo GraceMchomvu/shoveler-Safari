@@ -50,12 +50,15 @@ const userCount = await prisma.user.count();
 await prisma.$disconnect();
 
 if (userCount === 0) {
-  console.log("[boot] Empty DB — seeding admin...");
+  console.log("[boot] Empty DB — seeding...");
   run("npx", ["tsx", "prisma/seed.ts"]);
-  run("node", ["scripts/fix-admin-login.mjs"]);
 } else {
-  console.log(`[boot] DB has ${userCount} user(s) — skipping seed`);
+  console.log(`[boot] DB has ${userCount} user(s)`);
 }
+
+// Always reset known admin login (Render free disk can leave broken/random seed passwords)
+console.log("[boot] Ensuring admin login (admin / SEED_ADMIN_PASSWORD)...");
+run("node", ["scripts/fix-admin-login.mjs"]);
 
 const uploadDir = path.join(cmsRoot, process.env.UPLOAD_DIR || "./uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
