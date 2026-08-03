@@ -19,7 +19,6 @@ function run(cmd, args, opts = {}) {
   if (r.status !== 0) process.exit(r.status || 1);
 }
 
-/** Ensure production has a usable JWT secret (Render env or generated fallback). */
 function ensureJwtSecret() {
   const raw = (process.env.JWT_SECRET || "").trim();
   const bad =
@@ -37,28 +36,26 @@ function ensureJwtSecret() {
   const generated = crypto.randomBytes(48).toString("hex");
   process.env.JWT_SECRET = generated;
   console.warn(
-    `[boot] JWT_SECRET missing/weak in environment (length ${raw.length}). ` +
-      "Using a generated secret for this boot. Set JWT_SECRET in Render → Environment to keep logins across restarts."
+    `[boot] JWT_SECRET missing/weak — generated for this boot. Set JWT_SECRET on Render to keep sessions stable.`
   );
 }
 
 console.log("[boot] Preparing database...");
-run("npx", ["prisma", "db", "push", "--schema=prisma/schema.prisma", "--skip-generate"]);
+run("npx", ["prisma", "db", "push", "--schema=prisma/schema.prisma", "--skip-generate", "--accept-data-loss"]);
 
 const prisma = new PrismaClient();
-const userCount = await prisma.user.count();
-await prisma.$disconnect();
+const adminCount = await prisma.user.count({
+  where: { OR: [{ username: "admin" }, { role: "SUPER_ADMIN" }] },
+});
 
-if (userCount === 0) {
-  console.log("[boot] Empty DB — seeding...");
+if (adminCount === 0) {
+  console.log("[boot] No admin yet — seeding + creating admin once...");
   run("npx", ["tsx", "prisma/seed.ts"]);
+  run("node", ["scripts/fix-admin-login.mjs"]);
 } else {
-  console.log(`[boot] DB has ${userCount} user(s)`);
+  console.log(`[boot] Admin exists (${adminCount}) — NOT resetting password`);
 }
-
-// Always reset known admin login (Render free disk can leave broken/random seed passwords)
-console.log("[boot] Ensuring admin login (admin / SEED_ADMIN_PASSWORD)...");
-run("node", ["scripts/fix-admin-login.mjs"]);
+await prisma.$disconnect();
 
 const uploadDir = path.join(cmsRoot, process.env.UPLOAD_DIR || "./uploads");
 fs.mkdirSync(uploadDir, { recursive: true });

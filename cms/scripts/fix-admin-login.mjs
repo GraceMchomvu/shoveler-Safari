@@ -18,36 +18,36 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const raw = (process.env.DATABASE_URL || "file:./dev.db").trim();
-let p = raw.startsWith("file:") ? raw.slice(5) : raw;
-const cleaned = p.replace(/^\.[\\/]/, "").replace(/\\/g, "/");
-const filePath = path.isAbsolute(p) || /^[A-Za-z]:/.test(p)
-  ? p
-  : cleaned.startsWith("prisma/")
-    ? path.join(cmsRoot, cleaned)
-    : path.join(schemaDir, cleaned);
-process.env.DATABASE_URL = `file:${path.resolve(filePath).replace(/\\/g, "/")}`;
-console.log("DB:", process.env.DATABASE_URL);
+const raw = (process.env.DATABASE_URL || "").trim();
+if (!raw) {
+  console.error("DATABASE_URL is required");
+  process.exit(1);
+}
+if (raw.startsWith("file:")) {
+  let p = raw.slice(5);
+  const cleaned = p.replace(/^\.[\\/]/, "").replace(/\\/g, "/");
+  const filePath = path.isAbsolute(p) || /^[A-Za-z]:/.test(p)
+    ? p
+    : cleaned.startsWith("prisma/")
+      ? path.join(cmsRoot, cleaned)
+      : path.join(schemaDir, cleaned);
+  process.env.DATABASE_URL = `file:${path.resolve(filePath).replace(/\\/g, "/")}`;
+}
+console.log("DB provider:", process.env.DATABASE_URL.startsWith("file:") ? "sqlite" : "postgres");
 
 const prisma = new PrismaClient();
 const password = process.env.SEED_ADMIN_PASSWORD || "AdminPass123";
 const email = (process.env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
 const phone = process.env.SEED_ADMIN_PHONE || "+255783591810";
 const passwordHash = await bcrypt.hash(password, 12);
+const forceReset = process.env.FORCE_ADMIN_RESET === "1" || process.env.FORCE_ADMIN_RESET === "true";
 
-const users = await prisma.user.findMany({
-  select: { id: true, email: true, username: true, active: true, role: true },
-});
-console.log("Users before fix:", users);
-
-// Primary admin: username admin + known email/password
 let user = await prisma.user.findFirst({
-  where: { OR: [{ email }, { username: "admin" }, { email: "admin@shovelersafari.com" }] },
-  orderBy: { createdAt: "asc" },
+  where: { OR: [{ email }, { username: "admin" }] },
 });
 
 if (!user) {
-  console.log("No admin found — creating one");
+  console.log("Creating admin once...");
   user = await prisma.user.create({
     data: {
       email,
@@ -60,7 +60,8 @@ if (!user) {
       active: true,
     },
   });
-} else {
+} else if (forceReset) {
+  console.log("FORCE_ADMIN_RESET — updating admin password");
   user = await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -73,29 +74,26 @@ if (!user) {
       role: "SUPER_ADMIN",
     },
   });
+} else {
+  console.log(`Admin already exists (${user.username || user.email}) — leaving password unchanged`);
 }
 
-// Any other SUPER_ADMIN / seed admin emails get the same password so login never dead-ends
-await prisma.user.updateMany({
-  where: {
-    role: "SUPER_ADMIN",
-    NOT: { id: user.id },
-  },
-  data: { passwordHash, mustChangePassword: true, active: true },
-});
-
-await prisma.session.deleteMany({ where: { userId: user.id } });
-const ok = await bcrypt.compare(password, user.passwordHash);
-console.log("Password verify after update:", ok);
+const ok = user ? await bcrypt.compare(password, (await prisma.user.findUnique({ where: { id: user.id } })).passwordHash) : false;
+if (forceReset || !user) {
+  console.log("Bootstrap password verify:", ok);
+  console.log(`Ready — username: admin / password: ${password}`);
+} else {
+  console.log("Password left as the user last set it.");
+}
 
 fs.writeFileSync(
   path.join(cmsRoot, ".seed-credentials"),
   [
-    "# Simple admin login — DO NOT COMMIT",
+    "# Admin login — DO NOT COMMIT",
     `# ${new Date().toISOString()}`,
     "",
     "username: admin",
-    `password: ${password}`,
+    forceReset || ok ? `password: ${password}` : "password: (unchanged — use the password you set)",
     `email (resets only): ${email}`,
     "",
     "LIVE: https://www.shovelersafari.com/admin/",
@@ -103,5 +101,4 @@ fs.writeFileSync(
   ].join("\n")
 );
 
-console.log(`Ready — username: admin / password: ${password}`);
 await prisma.$disconnect();

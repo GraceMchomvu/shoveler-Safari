@@ -25,7 +25,6 @@ RUN npx prisma generate --schema=prisma/schema.prisma \
 
 ENV NODE_ENV=production
 ENV PORT=4000
-ENV DATABASE_URL=file:./dev.db
 ENV UPLOAD_DIR=./uploads
 ENV TRUST_PROXY=1
 ENV COOKIE_SECURE=true
