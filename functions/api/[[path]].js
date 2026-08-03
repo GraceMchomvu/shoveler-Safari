@@ -5,8 +5,14 @@
  * If CMS_API_ORIGIN is missing, return a clear JSON error so the admin
  * login does not silently fail with a generic password error.
  */
+const DEFAULT_CMS_API_ORIGIN = "https://shoveler-cms-api-production.up.railway.app";
+
 export async function onRequest(context) {
-  const origin = context.env.CMS_API_ORIGIN;
+  let origin = (context.env.CMS_API_ORIGIN || DEFAULT_CMS_API_ORIGIN).replace(/\/$/, "");
+  // Never keep temporary laptop tunnels in production
+  if (/trycloudflare\.com/i.test(origin)) {
+    origin = DEFAULT_CMS_API_ORIGIN;
+  }
   if (!origin) {
     return Response.json(
       {
