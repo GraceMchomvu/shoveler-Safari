@@ -1,0 +1,50 @@
+# Free hosting for the CMS API (Render free tier).
+# Notes:
+# - Sleeps after ~15 min idle → first login can take 30–60s (cold start)
+# - No persistent disk → DB re-seeds on boot if empty
+# - Outbound SMTP (Gmail :587) is blocked on free → password-reset email may not send
+# - Keep-alive: .github/workflows/keep-cms-awake.yml pings /api/health every 10 minutes
+
+services:
+  - type: web
+    name: shoveler-cms-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: cms
+    buildCommand: npm install && npm install --prefix server && npx prisma generate --schema=prisma/schema.prisma && node -e "const fs=require('fs');const s='server/node_modules';fs.mkdirSync(s+'/@prisma',{recursive:true});fs.mkdirSync(s+'/.prisma',{recursive:true});fs.cpSync('node_modules/@prisma/client',s+'/@prisma/client',{recursive:true});if(fs.existsSync('node_modules/.prisma'))fs.cpSync('node_modules/.prisma',s+'/.prisma',{recursive:true});"
+    startCommand: node scripts/docker-boot.mjs
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: CLIENT_ORIGIN
+        value: https://www.shovelersafari.com
+      - key: SITE_ORIGIN
+        value: https://www.shovelersafari.com
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ALLOW_DEV_RESET_FILE
+        value: "false"
+      - key: SEED_ADMIN_PHONE
+        value: "+255783591810"
+      - key: SEED_ADMIN_PASSWORD
+        value: AdminPass123
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
