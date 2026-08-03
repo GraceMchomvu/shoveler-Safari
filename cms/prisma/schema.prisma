@@ -32,7 +32,9 @@ enum CommentStatus {
 model User {
   id               String              @id @default(cuid())
   email            String              @unique
+  username         String?             @unique // login name (optional); email still used for resets
   name             String
+  phone            String?             // E.164 preferred, e.g. +255783591810 (for WhatsApp resets)
   passwordHash     String
   role             Role                @default(AUTHOR)
   active           Boolean             @default(true)
@@ -65,10 +67,12 @@ model Session {
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique
+  codeHash  String?  // bcrypt of 6-digit verification code
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   used      Boolean  @default(false)
+  attempts  Int      @default(0)
   createdAt DateTime @default(now())
 }
 

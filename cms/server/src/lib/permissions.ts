@@ -51,9 +51,14 @@ const ALL: Permission[] = [
   "api:manage",
 ];
 
+/** ADMIN can run the CMS but cannot manage security/API keys or elevate to SUPER_ADMIN. */
+const ADMIN_PERMS: Permission[] = ALL.filter(
+  (p) => p !== "security:manage" && p !== "api:manage"
+);
+
 const ROLE_PERMS: Record<Role, Permission[]> = {
   SUPER_ADMIN: ALL,
-  ADMIN: ALL,
+  ADMIN: ADMIN_PERMS,
   EDITOR: [
     "dashboard:view",
     "pages:read",

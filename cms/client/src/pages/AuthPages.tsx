@@ -7,7 +7,7 @@ import { Btn, Card, Field, inputClass } from "../components/ui";
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
   const [need2fa, setNeed2fa] = useState(false);
@@ -19,14 +19,22 @@ export function LoginPage() {
     setError("");
     setBusy(true);
     try {
-      await login(email, password, totp || undefined);
-      navigate("/app");
+      await login(loginId, password, totp || undefined);
+      navigate("/app"); // Protected route redirects to /change-password when required
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not sign in";
       if (msg === "2FA_REQUIRED") {
         setNeed2fa(true);
         setError("Please enter the 6-digit code from your phone app.");
-      } else setError("Email or password is incorrect. Please try again.");
+      } else if (
+        msg.includes("CMS API") ||
+        msg.includes("CMS_API_ORIGIN") ||
+        msg.includes("Could not reach")
+      ) {
+        setError(
+          "The website admin server is not connected yet. Locally use http://localhost:5173/admin/ with the CMS running. On the live site, CMS_API_ORIGIN must point to your Node API."
+        );
+      } else setError("Username or password is incorrect. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -35,15 +43,15 @@ export function LoginPage() {
   return (
     <AuthShell title="Sign in to your website">
       <p className="text-sm text-[var(--muted)] mb-4">
-        Enter the email and password you were given to manage Northern Shoveler Adventure.
+        Sign in with your <strong>username</strong> (or email) and password.
       </p>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Field label="Your email">
+        <Field label="Username or email" hint="Example: admin">
           <input
             className={inputClass}
             autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value)}
           />
         </Field>
         <Field label="Password">
@@ -77,23 +85,45 @@ export function LoginPage() {
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
   return (
     <AuthShell title="Forgot password">
+      <p className="text-sm text-[var(--muted)] mb-4">
+        Enter your admin email. We will send a <strong>6-digit verification code</strong> and a
+        reset link by <strong>email</strong> and <strong>WhatsApp</strong> (if a phone number is
+        saved on your account).
+      </p>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          const data = await api<{ message: string }>("/api/auth/forgot-password", {
-            method: "POST",
-            body: JSON.stringify({ email }),
-          });
-          setMsg(data.message + " (dev: check API console for token)");
+          setBusy(true);
+          try {
+            const data = await api<{ message: string }>("/api/auth/forgot-password", {
+              method: "POST",
+              body: JSON.stringify({ email }),
+            });
+            setMsg(data.message);
+            navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+          } catch (err) {
+            setMsg(err instanceof Error ? err.message : "Could not start reset");
+          } finally {
+            setBusy(false);
+          }
         }}
         className="space-y-3"
       >
         <Field label="Email">
-          <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            className={inputClass}
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </Field>
-        <Btn type="submit">Send reset link</Btn>
+        <Btn type="submit" disabled={busy} className="w-full">
+          {busy ? "Sending…" : "Send code & reset link"}
+        </Btn>
       </form>
       {msg && <p className="text-sm mt-3 text-green-800">{msg}</p>}
       <p className="text-sm mt-4">
@@ -105,41 +135,180 @@ export function ForgotPasswordPage() {
   );
 }
 
-export function ResetPasswordPage() {
-  const [params] = useSearchParams();
+export function ForceChangePasswordPage() {
+  const { refresh } = useAuth();
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
+  const [currentPassword, setCurrent] = useState("");
+  const [newPassword, setNew] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
-  const token = params.get("token") || "";
+  const [busy, setBusy] = useState(false);
 
   return (
-    <AuthShell title="Reset password">
+    <AuthShell title="Choose a new password">
+      <p className="text-sm text-[var(--muted)] mb-4">
+        For security, you must set a new password before using the website manager. Use at least 10
+        characters with upper case, lower case, and a number.
+      </p>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
+          setError("");
+          if (newPassword !== confirm) {
+            setError("New passwords do not match.");
+            return;
+          }
+          setBusy(true);
           try {
-            await api("/api/auth/reset-password", {
+            await api("/api/auth/change-password", {
               method: "POST",
-              body: JSON.stringify({ token, password }),
+              body: JSON.stringify({ currentPassword, newPassword }),
             });
-            navigate("/login");
+            await refresh();
+            navigate("/app");
           } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed");
+            setError(err instanceof Error ? err.message : "Could not update password");
+          } finally {
+            setBusy(false);
           }
         }}
         className="space-y-3"
       >
+        <Field label="Current password">
+          <input
+            type="password"
+            className={inputClass}
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrent(e.target.value)}
+          />
+        </Field>
         <Field label="New password">
           <input
             type="password"
             className={inputClass}
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNew(e.target.value)}
+          />
+        </Field>
+        <Field label="Confirm new password">
+          <input
+            type="password"
+            className={inputClass}
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+        </Field>
+        {error && <p className="text-sm text-red-700">{error}</p>}
+        <Btn type="submit" disabled={busy} className="w-full">
+          {busy ? "Saving…" : "Save new password"}
+        </Btn>
+      </form>
+    </AuthShell>
+  );
+}
+
+export function ResetPasswordPage() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const token = params.get("token") || "";
+  const [email, setEmail] = useState(params.get("email") || "");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const hasToken = token.length >= 20;
+
+  return (
+    <AuthShell title="Reset password">
+      <p className="text-sm text-[var(--muted)] mb-4">
+        {hasToken
+          ? "Choose a new password for your account."
+          : "Enter the 6-digit code from your email or WhatsApp, then choose a new password."}
+      </p>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setError("");
+          if (password !== confirm) {
+            setError("Passwords do not match.");
+            return;
+          }
+          setBusy(true);
+          try {
+            await api("/api/auth/reset-password", {
+              method: "POST",
+              body: JSON.stringify(
+                hasToken
+                  ? { token, password }
+                  : { email, code, password }
+              ),
+            });
+            navigate("/login");
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed");
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="space-y-3"
+      >
+        {!hasToken && (
+          <>
+            <Field label="Email">
+              <input
+                className={inputClass}
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </Field>
+            <Field label="6-digit verification code" hint="From email or WhatsApp">
+              <input
+                className={inputClass}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              />
+            </Field>
+          </>
+        )}
+        <Field
+          label="New password"
+          hint="At least 10 characters with upper case, lower case, and a number"
+        >
+          <input
+            type="password"
+            className={inputClass}
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
+        <Field label="Confirm new password">
+          <input
+            type="password"
+            className={inputClass}
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+        </Field>
         {error && <p className="text-sm text-red-700">{error}</p>}
-        <Btn type="submit">Update password</Btn>
+        <Btn type="submit" disabled={busy} className="w-full">
+          {busy ? "Updating…" : "Update password"}
+        </Btn>
       </form>
+      <p className="text-sm mt-4">
+        <Link to="/forgot-password" className="underline">
+          Resend code
+        </Link>
+      </p>
     </AuthShell>
   );
 }

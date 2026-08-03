@@ -12,87 +12,79 @@ Custom content management system for [www.shovelersafari.com](https://www.shovel
 
 ```bash
 cd cms
+cp .env.example .env
+# Set a long random JWT_SECRET in .env
 npm install
 npm install --prefix server
 npm install --prefix client
 npm run db:setup
+npm run harden          # rotates any known weak seed passwords
+npm run clean:site      # strip public Admin links + demo pages
 npm run dev
 ```
 
-- Admin login: http://localhost:5173/admin/  
-- API: http://localhost:4000  
+- Admin: http://localhost:5173/admin/ (or http://localhost:4000/admin/ after build)
+- API: http://localhost:4000
 
-On the public website, click the **lock icon** next to search (or “Admin login” in the mobile menu / footer) to open this login screen.
+**Do not put Admin login links on the public marketing site.** Open the admin URL directly (bookmark it). Prefer hosting admin on a separate subdomain in production (e.g. `cms.shovelersafari.com`).
 
-### Default login
+### First login credentials
 
-| Email | Password | Role |
-|--------|----------|------|
-| `admin@shovelersafari.com` | `ShovelerAdmin123!` | Super Admin |
-| `editor@shovelersafari.com` | `Editor123!` | Editor |
-| `author@shovelersafari.com` | `Author123!` | Author |
+Seed no longer uses published default passwords. After `db:setup` or `npm run harden`, open the gitignored file:
 
-Change the admin password after first login (Account → Change password).
+`cms/.seed-credentials`
 
-## Production build
+Sign in, change the password when prompted, then **delete** `.seed-credentials`.
+
+## Production checklist
+
+1. `NODE_ENV=production`
+2. Strong `JWT_SECRET` (32+ random characters) — server refuses to start without it
+3. `CLIENT_ORIGIN` / `SITE_ORIGIN` set to your real HTTPS domains (localhost origins are **not** allowed in production)
+4. `TRUST_PROXY=1` behind Cloudflare / nginx
+5. Run `npm run harden` once on the production database (or set passwords manually)
+6. Enable 2FA for admin accounts (Account screen)
+7. Deploy marketing site (`tripix-html`) separately from the CMS API when possible
+8. `npm run smoke` and `npm run smoke -- https://your-api-host` before go-live
 
 ```bash
 cd cms
-npm run build   # builds admin UI + copies it to ../tripix-html/admin/
-npm start       # API + admin at http://localhost:4000/admin/
+npm run build   # builds admin UI → ../tripix-html/admin/
+NODE_ENV=production npm start
 ```
 
-### Cloudflare Pages
+### Cloudflare Pages + API host
 
-1. Deploy `tripix-html` (includes `/admin/` SPA after `npm run build`).
-2. Host the CMS API on a Node server.
-3. Set Pages env var `CMS_API_ORIGIN` to that API URL (e.g. `https://cms.yourhost.com`) so `/api/*` is proxied.
-4. Set API env `SITE_ORIGIN` / `CLIENT_ORIGIN` to `https://www.shovelersafari.com`.
+1. Deploy `tripix-html` (static site).
+2. Host the CMS API on a Node server with HTTPS.
+3. Set Pages env `CMS_API_ORIGIN` to that API URL so `/api/*` can be proxied if needed.
+4. Set API `SITE_ORIGIN` / `CLIENT_ORIGIN` to your real site / admin origins.
+5. Prefer **not** advertising `/admin/` from the public nav; use a private URL or Cloudflare Access.
+
+## Security features (built in)
+
+| Control | Behavior |
+|---------|----------|
+| Passwords | Min 10 chars, upper + lower + number; bcrypt cost 12 |
+| mustChangePassword | Enforced server-side until changed |
+| JWT | No weak fallback in production; sessions revocable in DB |
+| Cookies | httpOnly, SameSite=lax, Secure on HTTPS |
+| Rate limits | Login 8/15min · forgot 5/hour · reset 10/15min · forms/comments 20/hour |
+| Uploads | JPEG/PNG/WebP/GIF/PDF only, 8MB max, SVG/HTML/JS blocked |
+| Roles | Only Super Admin can assign Admin / Super Admin |
+| CORS | Allowlist only; localhost stripped in production |
+| Errors | 500 responses never leak internal messages |
+| Publish | SEO files bridged to site; full content-pack stays on API host |
 
 ## Role permissions
 
 | Role | Access |
 |------|--------|
-| Super Admin | Everything |
-| Admin | Everything |
+| Super Admin | Everything including security + API keys |
+| Admin | Most CMS features (not security overview / API keys) |
 | Editor | Content, menus, SEO, forms, comments, analytics |
-| Author | Own posts, media, comments |
+| Author | Posts, media, comments |
 | Viewer | Dashboard, read content, analytics, activity |
-
-## Modules
-
-1. Dashboard — stats, activity, quick actions  
-2. Authentication — login, logout, forgot/reset, change password, 2FA, sessions  
-3. User Management — CRUD + roles  
-4. Pages — draft/publish/schedule/duplicate/SEO  
-5. Blog — posts, categories, tags, featured image, comments flag  
-6. Media Library — upload, search, alt, rename, delete, image compression  
-7. Menu Builder — header / footer / mobile  
-8. Website Settings — title, logo, contact, timezone, language  
-9. Theme — colors, fonts, header/footer, dark mode preview  
-10. SEO — meta fields + robots.txt + sitemap + **Publish to website** bridge  
-11. Forms — definitions + submissions inbox  
-12. Analytics — seeded mock metrics  
-13. File Manager — browse uploads  
-14. Backup & Restore — ZIP of DB + uploads  
-15. Notifications — in-app alerts  
-16. Comments — approve / reject / spam / reply  
-17. Search — global search  
-18. Activity Logs — audit trail  
-19. Security — overview + hardening baseline  
-20. REST API — `/api/v1/*` + API keys  
-
-## Public API
-
-```
-GET  /api/v1/pages
-GET  /api/v1/posts
-GET  /api/v1/menus/:location
-GET  /api/v1/settings
-POST /api/v1/forms/:slug/submit
-```
-
-Optional header: `X-API-Key: sk_...`
 
 ## Scripts
 
@@ -102,11 +94,25 @@ Optional header: `X-API-Key: sk_...`
 | `npm run build` | Build admin UI → `tripix-html/admin/` |
 | `npm start` | Production API (serves `/admin` if built) |
 | `npm run db:setup` | generate + push + seed |
-| `npm run db:seed` | re-seed |
+| `npm run harden` | Rotate weak passwords + force password change |
+| `npm run clean:site` | Remove public Admin links + demo HTML pages |
+| `npm run smoke` | Static (and optional live) readiness checks |
+
+## Public API
+
+```
+GET  /api/v1/pages
+GET  /api/v1/posts
+GET  /api/v1/menus/:location
+GET  /api/v1/settings
+POST /api/v1/forms/:slug/submit
+POST /api/v1/posts/:slug/comments
+```
+
+Optional header: `X-API-Key: sk_...`
 
 ## Notes
 
-- Password reset emails are **logged to the API console** in development (no SMTP yet).
-- Analytics are **mock snapshots** until a provider is connected.
-- **Publish to website** (SEO screen) writes `sitemap.xml`, `robots.txt`, and `admin/content-pack.json` into `../tripix-html`.
-- Website admin icon: local → `http://localhost:5173/admin/`; production → `/admin/`.
+- Password reset sends a **6-digit code + link** by **email (SMTP)** and **WhatsApp (Twilio or Meta Cloud API)**. Configure vars in `.env.example`. Each admin should save a WhatsApp number under **Account**. For local testing set `ALLOW_DEV_RESET_FILE=true` and read `cms/.dev-reset-link`.
+- Analytics are mock snapshots until a provider is connected.
+- **Publish to website** writes `sitemap.xml` and `robots.txt` into `../tripix-html` only (not a public content-pack dump).

@@ -21,21 +21,26 @@ export async function writePublicSeo(settings: Record<string, unknown>) {
   const robots = String(
     settings.robotsTxt || `User-agent: *\nAllow: /\nSitemap: ${base}/sitemap.xml\n`
   );
+  // Full content pack stays on the API host only (not copied into the public marketing site).
   const pack = { exportedAt: new Date().toISOString(), pages, posts, settings };
 
   fs.writeFileSync(path.join(publicDir, "sitemap.xml"), sitemap);
   fs.writeFileSync(path.join(publicDir, "robots.txt"), robots);
   fs.writeFileSync(path.join(publicDir, "content-pack.json"), JSON.stringify(pack, null, 2));
 
-  // Bridge published SEO + content pack into the live HTML site folder
+  // Bridge SEO files only into the live HTML site folder
   if (fs.existsSync(siteRoot)) {
     fs.writeFileSync(path.join(siteRoot, "sitemap.xml"), sitemap);
     fs.writeFileSync(path.join(siteRoot, "robots.txt"), robots);
-    fs.mkdirSync(path.join(siteRoot, "admin"), { recursive: true });
-    fs.writeFileSync(
-      path.join(siteRoot, "admin", "content-pack.json"),
-      JSON.stringify(pack, null, 2)
-    );
+    // Remove previously published content pack from public admin folder if present
+    const leaked = path.join(siteRoot, "admin", "content-pack.json");
+    if (fs.existsSync(leaked)) {
+      try {
+        fs.unlinkSync(leaked);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   return { pages: pages.length, posts: posts.length, bridged: fs.existsSync(siteRoot) };

@@ -8,16 +8,28 @@ import sharp from "sharp";
 import archiver from "archiver";
 import { z } from "zod";
 import { ContentStatus, CommentStatus, Role } from "@prisma/client";
-import { cmsRoot, prisma } from "../lib/prisma.js";
+import { cmsRoot, prisma, sqliteDbFilePath } from "../lib/prisma.js";
 import { logActivity, notify } from "../lib/activity.js";
 import { can } from "../lib/permissions.js";
 import { writePublicSeo } from "../lib/publish.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
+import {
+  ALLOWED_UPLOAD_EXTS,
+  ALLOWED_UPLOAD_MIMES,
+  isStrongPassword,
+  MAX_UPLOAD_BYTES,
+  PASSWORD_MIN,
+  passwordSchemaMessage,
+} from "../lib/security.js";
 
 const router = Router();
 router.use(requireAuth);
 
-const uploadRoot = path.join(cmsRoot, "uploads");
+const uploadRoot = process.env.UPLOAD_DIR
+  ? path.isAbsolute(process.env.UPLOAD_DIR)
+    ? process.env.UPLOAD_DIR
+    : path.join(cmsRoot, process.env.UPLOAD_DIR)
+  : path.join(cmsRoot, "uploads");
 const backupRoot = path.join(cmsRoot, "backups");
 fs.mkdirSync(uploadRoot, { recursive: true });
 fs.mkdirSync(backupRoot, { recursive: true });
@@ -25,11 +37,36 @@ fs.mkdirSync(backupRoot, { recursive: true });
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadRoot),
   filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
-    cb(null, `${Date.now()}-${safe}`);
+    const ext = path.extname(file.originalname).toLowerCase() || "";
+    const base = path
+      .basename(file.originalname, path.extname(file.originalname))
+      .replace(/[^a-zA-Z0-9._-]/g, "_")
+      .slice(0, 80);
+    cb(null, `${Date.now()}-${base}${ext}`);
   },
 });
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_UPLOAD_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mime = (file.mimetype || "").toLowerCase();
+    if (!ALLOWED_UPLOAD_EXTS.has(ext) || !ALLOWED_UPLOAD_MIMES.has(mime)) {
+      return cb(new Error("Only JPEG, PNG, WebP, GIF, and PDF files are allowed"));
+    }
+    // Block double extensions and SVG masquerading
+    if (/\.(html?|svg|js|mjs|php|exe|sh|bat)$/i.test(file.originalname)) {
+      return cb(new Error("File type not allowed"));
+    }
+    cb(null, true);
+  },
+});
+
+function canAssignRole(actorRole: Role, targetRole: Role) {
+  if (actorRole === "SUPER_ADMIN") return true;
+  // Non–super-admins cannot create or promote to ADMIN / SUPER_ADMIN
+  return targetRole !== "SUPER_ADMIN" && targetRole !== "ADMIN";
+}
 
 function slugify(s: string) {
   return s
@@ -79,6 +116,7 @@ router.get("/users", requirePermission("users:manage"), async (_req, res) => {
     select: {
       id: true,
       email: true,
+      username: true,
       name: true,
       role: true,
       active: true,
@@ -92,15 +130,33 @@ router.get("/users", requirePermission("users:manage"), async (_req, res) => {
 router.post("/users", requirePermission("users:manage"), async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
+    username: z
+      .string()
+      .min(3)
+      .max(32)
+      .regex(/^[a-zA-Z0-9._-]+$/)
+      .transform((v) => v.toLowerCase())
+      .optional(),
     name: z.string().min(1),
-    password: z.string().min(8),
+    password: z
+      .string()
+      .min(PASSWORD_MIN)
+      .refine(isStrongPassword, { message: passwordSchemaMessage() }),
     role: z.nativeEnum(Role),
   });
   const data = schema.parse(req.body);
-  const hash = await bcrypt.hash(data.password, 10);
+  if (!canAssignRole(req.user!.role, data.role)) {
+    return res.status(403).json({ error: "Only Super Admin can assign Admin roles" });
+  }
+  if (data.username) {
+    const taken = await prisma.user.findUnique({ where: { username: data.username } });
+    if (taken) return res.status(400).json({ error: "Username already taken" });
+  }
+  const hash = await bcrypt.hash(data.password, 12);
   const user = await prisma.user.create({
     data: {
       email: data.email.toLowerCase(),
+      username: data.username || null,
       name: data.name,
       passwordHash: hash,
       role: data.role,
@@ -116,19 +172,43 @@ router.post("/users", requirePermission("users:manage"), async (req, res) => {
   await notify({
     type: "user_registered",
     title: "New user created",
-    body: `${user.name} (${user.email})`,
+    body: `${user.name} (${user.username || user.email})`,
     link: "/app/users",
   });
-  res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+  res.status(201).json({
+    user: {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      name: user.name,
+      role: user.role,
+    },
+  });
 });
 
 router.patch("/users/:id", requirePermission("users:manage"), async (req, res) => {
   const schema = z.object({
     name: z.string().optional(),
+    username: z
+      .string()
+      .min(3)
+      .max(32)
+      .regex(/^[a-zA-Z0-9._-]+$/)
+      .transform((v) => v.toLowerCase())
+      .nullable()
+      .optional(),
+    email: z.string().email().optional(),
     role: z.nativeEnum(Role).optional(),
     active: z.boolean().optional(),
   });
   const data = schema.parse(req.body);
+  const existing = await prisma.user.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (existing.role === "SUPER_ADMIN" && req.user!.role !== "SUPER_ADMIN") {
+    return res.status(403).json({ error: "Cannot modify Super Admin" });
+  }
+  if (data.role && !canAssignRole(req.user!.role, data.role)) {
+    return res.status(403).json({ error: "Only Super Admin can assign Admin roles" });
+  }
   const user = await prisma.user.update({ where: { id: req.params.id }, data });
   await logActivity({ userId: req.user!.id, action: "update", entity: "user", entityId: user.id });
   res.json({ user });
@@ -136,6 +216,10 @@ router.patch("/users/:id", requirePermission("users:manage"), async (req, res) =
 
 router.delete("/users/:id", requirePermission("users:manage"), async (req, res) => {
   if (req.params.id === req.user!.id) return res.status(400).json({ error: "Cannot delete yourself" });
+  const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (existing?.role === "SUPER_ADMIN" && req.user!.role !== "SUPER_ADMIN") {
+    return res.status(403).json({ error: "Cannot delete Super Admin" });
+  }
   await prisma.user.delete({ where: { id: req.params.id } });
   await logActivity({ userId: req.user!.id, action: "delete", entity: "user", entityId: req.params.id });
   res.json({ ok: true });
@@ -434,8 +518,12 @@ router.post("/media", requirePermission("media:manage"), upload.single("file"), 
   let finalPath = req.file.path;
   let size = req.file.size;
   let mimeType = req.file.mimetype || "application/octet-stream";
+  if (!ALLOWED_UPLOAD_MIMES.has(mimeType)) {
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({ error: "File type not allowed" });
+  }
   try {
-    if (mimeType.startsWith("image/") && mimeType !== "image/svg+xml") {
+    if (mimeType.startsWith("image/")) {
       const compressed = `${req.file.path}.jpg`;
       await sharp(req.file.path).rotate().jpeg({ quality: 82 }).toFile(compressed);
       fs.unlinkSync(req.file.path);
@@ -445,7 +533,9 @@ router.post("/media", requirePermission("media:manage"), upload.single("file"), 
       mimeType = "image/jpeg";
     }
   } catch (err) {
-    console.error("Image optimize failed, keeping original file:", err);
+    console.error("Image optimize failed, rejecting upload:", err);
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    return res.status(400).json({ error: "Could not process image. Upload a valid JPEG, PNG, WebP, or GIF." });
   }
   const media = await prisma.media.create({
     data: {
@@ -474,15 +564,36 @@ router.patch("/media/:id", requirePermission("media:manage"), async (req, res) =
 router.post("/media/:id/replace", requirePermission("media:manage"), upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file" });
   const existing = await prisma.media.findUniqueOrThrow({ where: { id: req.params.id } });
+  let mimeType = req.file.mimetype || "application/octet-stream";
+  let size = req.file.size;
+  let finalPath = req.file.path;
+  if (!ALLOWED_UPLOAD_MIMES.has(mimeType)) {
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({ error: "File type not allowed" });
+  }
+  try {
+    if (mimeType.startsWith("image/")) {
+      const compressed = `${req.file.path}.jpg`;
+      await sharp(req.file.path).rotate().jpeg({ quality: 82 }).toFile(compressed);
+      fs.unlinkSync(req.file.path);
+      fs.renameSync(compressed, req.file.path);
+      size = fs.statSync(req.file.path).size;
+      finalPath = req.file.path;
+      mimeType = "image/jpeg";
+    }
+  } catch {
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    return res.status(400).json({ error: "Could not process image" });
+  }
   if (fs.existsSync(existing.path)) fs.unlinkSync(existing.path);
   const media = await prisma.media.update({
     where: { id: existing.id },
     data: {
       filename: req.file.filename,
       originalName: req.file.originalname,
-      mimeType: req.file.mimetype,
-      size: req.file.size,
-      path: req.file.path,
+      mimeType,
+      size,
+      path: finalPath,
       url: `/uploads/${req.file.filename}`,
     },
   });
@@ -804,6 +915,7 @@ router.get("/activity", requirePermission("activity:view"), async (_req, res) =>
 router.get("/search", requirePermission("search:use"), async (req, res) => {
   const q = String(req.query.q || "").trim();
   if (!q) return res.json({ results: [] });
+  const canManageUsers = can(req.user!.role, "users:manage");
   const [pages, posts, media, users, forms] = await Promise.all([
     prisma.page.findMany({
       where: { OR: [{ title: { contains: q } }, { content: { contains: q } }] },
@@ -817,11 +929,13 @@ router.get("/search", requirePermission("search:use"), async (req, res) => {
       where: { OR: [{ originalName: { contains: q } }, { altText: { contains: q } }] },
       take: 10,
     }),
-    prisma.user.findMany({
-      where: { OR: [{ name: { contains: q } }, { email: { contains: q } }] },
-      take: 10,
-      select: { id: true, name: true, email: true, role: true },
-    }),
+    canManageUsers
+      ? prisma.user.findMany({
+          where: { OR: [{ name: { contains: q } }, { email: { contains: q } }] },
+          take: 10,
+          select: { id: true, name: true, email: true, role: true },
+        })
+      : Promise.resolve([]),
     prisma.form.findMany({ where: { name: { contains: q } }, take: 10 }),
   ]);
   res.json({
@@ -829,7 +943,12 @@ router.get("/search", requirePermission("search:use"), async (req, res) => {
       ...pages.map((p) => ({ type: "page", id: p.id, title: p.title, link: `/app/pages/${p.id}` })),
       ...posts.map((p) => ({ type: "post", id: p.id, title: p.title, link: `/app/posts/${p.id}` })),
       ...media.map((m) => ({ type: "media", id: m.id, title: m.originalName, link: `/app/media` })),
-      ...users.map((u) => ({ type: "user", id: u.id, title: u.name, link: `/app/users` })),
+      ...users.map((u) => ({
+        type: "user",
+        id: u.id,
+        title: u.name,
+        link: `/app/users`,
+      })),
       ...forms.map((f) => ({ type: "form", id: f.id, title: f.name, link: `/app/forms/${f.id}` })),
     ],
   });
@@ -894,8 +1013,8 @@ async function createBackupZip(outPath: string) {
     output.on("close", () => resolve());
     archive.on("error", reject);
     archive.pipe(output);
-    const dbPath = path.join(cmsRoot, "prisma/dev.db");
-    if (fs.existsSync(dbPath)) archive.file(dbPath, { name: "dev.db" });
+    const dbPath = sqliteDbFilePath();
+    if (fs.existsSync(dbPath)) archive.file(dbPath, { name: path.basename(dbPath) });
     if (fs.existsSync(uploadRoot)) archive.directory(uploadRoot, "uploads");
     archive.finalize();
   });
@@ -943,8 +1062,10 @@ router.get("/security", requirePermission("security:manage"), async (_req, res) 
   ]);
   res.json({
     httpsAssumed: true,
-    csrf: "SameSite lax cookies + CORS",
-    rateLimit: "Login limited to 30/15min",
+    csrf: "SameSite lax cookies + CORS origin allowlist",
+    rateLimit: "Login 8/15min · forgot 5/hour · forms/comments 20/hour",
+    uploadPolicy: "JPEG/PNG/WebP/GIF/PDF · max 8MB · SVG/HTML/JS blocked",
+    passwordPolicy: "min 10 chars with upper, lower, number · mustChangePassword enforced",
     usersWith2fa,
     activeSessions: sessions,
     recentLogins,

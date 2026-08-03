@@ -3,13 +3,16 @@ import jwt from "jsonwebtoken";
 import type { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { can, type Permission } from "../lib/permissions.js";
+import { resolveJwtSecret } from "../lib/security.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+const JWT_SECRET = resolveJwtSecret();
 
 export type AuthUser = {
   id: string;
   email: string;
+  username: string | null;
   name: string;
+  phone: string | null;
   role: Role;
   mustChangePassword: boolean;
   twoFactorEnabled: boolean;
@@ -32,6 +35,31 @@ export function verifyToken<T = { sub: string; sid: string }>(token: string): T 
   return jwt.verify(token, JWT_SECRET) as T;
 }
 
+const ALLOWED_WHILE_MUST_CHANGE = new Set([
+  "GET /api/auth/me",
+  "POST /api/auth/logout",
+  "POST /api/auth/change-password",
+  "PATCH /api/auth/profile",
+  "GET /api/auth/sessions",
+  "DELETE /api/auth/sessions/:id",
+]);
+
+function routeKey(req: Request) {
+  // Express mounts strip prefixes; match on originalUrl path without query
+  const path = (req.originalUrl || req.url || "").split("?")[0];
+  return `${req.method} ${path}`;
+}
+
+function isAllowedWhileMustChange(req: Request) {
+  const key = routeKey(req);
+  if (ALLOWED_WHILE_MUST_CHANGE.has(key)) return true;
+  // Parameterized session delete
+  if (req.method === "DELETE" && /^\/api\/auth\/sessions\/[^/]+$/.test(key.replace("DELETE ", ""))) {
+    return true;
+  }
+  return false;
+}
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
     const token = req.cookies?.cms_token || bearer(req);
@@ -50,12 +78,22 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     req.user = {
       id: session.user.id,
       email: session.user.email,
+      username: session.user.username ?? null,
       name: session.user.name,
+      phone: session.user.phone ?? null,
       role: session.user.role,
       mustChangePassword: session.user.mustChangePassword,
       twoFactorEnabled: session.user.twoFactorEnabled,
     };
     req.sessionId = session.id;
+
+    if (req.user.mustChangePassword && !isAllowedWhileMustChange(req)) {
+      return res.status(403).json({
+        error: "PASSWORD_CHANGE_REQUIRED",
+        message: "You must change your password before continuing.",
+      });
+    }
+
     next();
   } catch {
     return res.status(401).json({ error: "Unauthorized" });

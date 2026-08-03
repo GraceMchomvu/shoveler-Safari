@@ -12,7 +12,9 @@ import { api } from "./api";
 export type User = {
   id: string;
   email: string;
+  username?: string | null;
   name: string;
+  phone?: string | null;
   role: string;
   mustChangePassword: boolean;
   twoFactorEnabled: boolean;
@@ -22,7 +24,7 @@ export type User = {
 type AuthCtx = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string, totp?: string) => Promise<void>;
+  login: (login: string, password: string, totp?: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   can: (permission: string) => boolean;
@@ -49,10 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
-  const login = useCallback(async (email: string, password: string, totp?: string) => {
+  const login = useCallback(async (loginId: string, password: string, totp?: string) => {
     const data = await api<{ user: User }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password, totp }),
+      body: JSON.stringify({ login: loginId, password, totp }),
     });
     setUser(data.user);
   }, []);

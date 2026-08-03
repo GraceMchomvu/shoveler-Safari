@@ -12,6 +12,9 @@
     "db:push": "prisma db push --schema=prisma/schema.prisma",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "npm run db:generate && npm run db:push && npm run db:seed",
+    "harden": "node scripts/harden-users.mjs",
+    "clean:site": "node scripts/clean-public-site.mjs",
+    "smoke": "node scripts/smoke-check.mjs",
     "postinstall": "npm run db:generate"
   },
   "devDependencies": {

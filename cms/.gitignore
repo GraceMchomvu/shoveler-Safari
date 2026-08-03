@@ -4,6 +4,8 @@ dist/
 .env.local
 .env.*
 !.env.example
+.seed-credentials
+.dev-reset-link
 *.db
 *.db-journal
 uploads/*

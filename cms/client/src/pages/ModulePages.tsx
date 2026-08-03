@@ -504,6 +504,7 @@ export function CommentsPage() {
 }
 
 export function UsersPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<any[]>([]);
   const load = () => api<{ users: any[] }>("/api/admin/users").then((d) => setUsers(d.users));
   useEffect(() => {
@@ -517,14 +518,20 @@ export function UsersPage() {
         actions={
           <Btn
             onClick={async () => {
-              const email = prompt("Email");
+              const username = prompt("Username (for login, e.g. editor1)");
+              const email = prompt("Email (for password resets)");
               const name = prompt("Name");
-              const password = prompt("Temp password (min 8)") || "TempPass123!";
+              const password =
+                prompt("Temporary password (min 10, include upper, lower, number)") || "";
+              if (!password || password.length < 10) {
+                toast("Password must be at least 10 characters", "err");
+                return;
+              }
               const role = prompt("Role (ADMIN|EDITOR|AUTHOR|VIEWER)", "EDITOR") || "EDITOR";
-              if (!email || !name) return;
+              if (!email || !name || !username) return;
               await api("/api/admin/users", {
                 method: "POST",
-                body: JSON.stringify({ email, name, password, role }),
+                body: JSON.stringify({ email, username, name, password, role }),
               });
               load();
             }}
@@ -534,9 +541,10 @@ export function UsersPage() {
         }
       />
       <Table
-        headers={["Name", "Email", "Role", "Active", "2FA", "Actions"]}
+        headers={["Name", "Username", "Email", "Role", "Active", "2FA", "Actions"]}
         rows={users.map((u) => [
           u.name,
+          u.username || "—",
           u.email,
           u.role,
           u.active ? "yes" : "no",
@@ -1105,8 +1113,11 @@ POST /api/v1/forms/:slug/submit`}</pre>
 
 export function AccountPage() {
   const { user, refresh } = useAuth();
+  const { toast } = useToast();
   const [currentPassword, setCurrent] = useState("");
   const [newPassword, setNew] = useState("");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [username, setUsername] = useState(user?.username || "");
   const [sessions, setSessions] = useState<any[]>([]);
   const [qr, setQr] = useState("");
   const [totp, setTotp] = useState("");
@@ -1115,10 +1126,58 @@ export function AccountPage() {
     api<{ sessions: any[] }>("/api/auth/sessions").then((d) => setSessions(d.sessions));
   }, []);
 
+  useEffect(() => {
+    setPhone(user?.phone || "");
+    setUsername(user?.username || "");
+  }, [user?.phone, user?.username]);
+
   return (
     <div>
-      <PageHeader title="Account" subtitle={`${user?.email} · Change password, 2FA, sessions`} />
+      <PageHeader
+        title="Account"
+        subtitle={`${user?.username || user?.email} · Change password, 2FA, sessions`}
+      />
       <div className="grid lg:grid-cols-2 gap-4">
+        <Card>
+          <h3 className="font-semibold mb-3">Login username</h3>
+          <p className="text-sm text-[var(--muted)] mb-3">
+            Sign in with this username. Your email stays for password resets only.
+          </p>
+          <form
+            className="space-y-3"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await api("/api/auth/profile", {
+                method: "PATCH",
+                body: JSON.stringify({
+                  username: username.trim() || null,
+                  phone: phone.trim() || null,
+                }),
+              });
+              toast("Profile saved");
+              refresh();
+            }}
+          >
+            <Field label="Username" hint="Letters, numbers, . _ - (example: admin)">
+              <input
+                className={inputClass}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
+              />
+            </Field>
+            <Field label="Phone (WhatsApp)" hint="Include country code, e.g. +255783591810">
+              <input
+                className={inputClass}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+255…"
+              />
+            </Field>
+            <p className="text-xs text-[var(--muted)]">Recovery email: {user?.email}</p>
+            <Btn type="submit">Save profile</Btn>
+          </form>
+        </Card>
         <Card>
           <h3 className="font-semibold mb-3">Change password</h3>
           <form
@@ -1143,10 +1202,14 @@ export function AccountPage() {
                 onChange={(e) => setCurrent(e.target.value)}
               />
             </Field>
-            <Field label="New password">
+            <Field
+              label="New password"
+              hint="At least 10 characters with upper case, lower case, and a number"
+            >
               <input
                 type="password"
                 className={inputClass}
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNew(e.target.value)}
               />

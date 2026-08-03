@@ -15,7 +15,15 @@ export async function api<T = unknown>(
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = typeof data.error === "string" ? data.error : data.error?.formErrors?.[0] || res.statusText;
+    if (data.error === "PASSWORD_CHANGE_REQUIRED" && typeof window !== "undefined") {
+      if (!window.location.pathname.includes("/change-password")) {
+        window.location.assign("/admin/change-password");
+      }
+    }
+    const err =
+      typeof data.error === "string"
+        ? data.error
+        : data.error?.formErrors?.[0] || data.message || res.statusText;
     throw new Error(err || "Request failed");
   }
   return data as T;

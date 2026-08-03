@@ -1,10 +1,19 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { notify } from "../lib/activity.js";
 
 const router = Router();
+
+const writeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many submissions. Please try again later." },
+});
 
 async function optionalApiKey(req: import("express").Request) {
   const key = req.headers["x-api-key"];
@@ -91,20 +100,22 @@ router.get("/settings", async (_req, res) => {
   });
 });
 
-router.post("/forms/:slug/submit", async (req, res) => {
+router.post("/forms/:slug/submit", writeLimiter, async (req, res) => {
   const form = await prisma.form.findFirst({ where: { slug: req.params.slug, active: true } });
   if (!form) return res.status(404).json({ error: "Form not found" });
   const honeypot = req.body._hp;
   const spam = Boolean(honeypot);
+  // Strip honeypot from stored payload
+  const { _hp: _ignored, ...safeBody } = req.body || {};
   const submission = await prisma.formSubmission.create({
     data: {
       formId: form.id,
-      data: JSON.stringify(req.body),
+      data: JSON.stringify(safeBody),
       spam,
     },
   });
   if (!spam) {
-    console.log(`[form-notify] ${form.notifyEmail || "admin"}: new submission ${submission.id}`);
+    console.log(`[form-notify] new submission ${submission.id}`);
     await notify({
       type: "form",
       title: `Form submitted: ${form.name}`,
@@ -115,17 +126,19 @@ router.post("/forms/:slug/submit", async (req, res) => {
   res.status(201).json({ ok: true, id: submission.id });
 });
 
-router.post("/posts/:slug/comments", async (req, res) => {
+router.post("/posts/:slug/comments", writeLimiter, async (req, res) => {
   const post = await prisma.post.findFirst({
     where: { slug: req.params.slug, status: "PUBLISHED", commentsEnabled: true },
   });
   if (!post) return res.status(404).json({ error: "Not found" });
   const schema = z.object({
-    authorName: z.string().min(1),
+    authorName: z.string().min(1).max(120),
     authorEmail: z.string().email().optional(),
-    body: z.string().min(1),
+    body: z.string().min(1).max(5000),
   });
-  const data = schema.parse(req.body);
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid comment" });
+  const data = parsed.data;
   const comment = await prisma.comment.create({
     data: {
       postId: post.id,

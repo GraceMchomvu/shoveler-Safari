@@ -26,12 +26,8 @@ export default function RichEditor({ value, onChange, placeholder }: Props) {
     extensions: [
       StarterKit.configure({
         // New lines / paragraphs start as normal text, not bold
-        bold: {
-          keepOnSplit: false,
-        },
-        italic: {
-          keepOnSplit: false,
-        },
+        bold: {},
+        italic: {},
       }),
       Image.configure({
         HTMLAttributes: { class: "rounded-lg max-w-full h-auto my-3" },

@@ -3,7 +3,12 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { ToastProvider } from "./components/Toast";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import { ForgotPasswordPage, LoginPage, ResetPasswordPage } from "./pages/AuthPages";
+import {
+  ForceChangePasswordPage,
+  ForgotPasswordPage,
+  LoginPage,
+  ResetPasswordPage,
+} from "./pages/AuthPages";
 import { PageEditor, PagesList, PostEditor, PostsList } from "./pages/ContentPages";
 import {
   AccountPage,
@@ -36,6 +41,21 @@ function Protected({ children }: { children: React.ReactNode }) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  if (user.mustChangePassword) return <Navigate to="/change-password" replace />;
+  return <>{children}</>;
+}
+
+function RequireLogin({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen grid place-items-center text-[var(--muted)]">
+        Opening your website manager…
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.mustChangePassword) return <Navigate to="/app" replace />;
   return <>{children}</>;
 }
 
@@ -45,6 +65,14 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route
+        path="/change-password"
+        element={
+          <RequireLogin>
+            <ForceChangePasswordPage />
+          </RequireLogin>
+        }
+      />
       <Route
         path="/app"
         element={
