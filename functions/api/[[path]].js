@@ -1,16 +1,20 @@
 /**
- * Proxies /api/* to the CMS Node server when CMS_API_ORIGIN is set
- * in Cloudflare Pages environment variables (e.g. https://cms.example.com).
- *
- * Free hosts (Render / temporary Cloudflare tunnel) are supported via CMS_API_ORIGIN.
+ * Proxies /api/* to the CMS Node API (free host).
+ * CMS_API_ORIGIN Cloudflare secret overrides the default.
  */
+const FALLBACK_ORIGIN = "https://informative-club-halifax-decrease.trycloudflare.com";
+
 export async function onRequest(context) {
-  const origin = (context.env.CMS_API_ORIGIN || "").replace(/\/$/, "");
+  let origin = (context.env.CMS_API_ORIGIN || FALLBACK_ORIGIN).replace(/\/$/, "");
+  // Drop dead paid Railway host if a stale secret remains
+  if (/railway\.app/i.test(origin)) {
+    origin = FALLBACK_ORIGIN;
+  }
   if (!origin) {
     return Response.json(
       {
         error:
-          "CMS API is not connected. Set Cloudflare Pages env CMS_API_ORIGIN to your free Node CMS host (e.g. https://shoveler-cms-api.onrender.com).",
+          "CMS API is not connected. Set Cloudflare Pages env CMS_API_ORIGIN to your free host (Render / tunnel).",
         code: "CMS_API_ORIGIN_MISSING",
       },
       { status: 503 }
@@ -32,12 +36,27 @@ export async function onRequest(context) {
   }
 
   try {
-    return await fetch(target, init);
+    const upstream = await fetch(target, init);
+    // If upstream is an HTML error page, surface a clear API error instead
+    const ctype = upstream.headers.get("content-type") || "";
+    if (!upstream.ok && ctype.includes("text/html")) {
+      return Response.json(
+        {
+          error: "CMS API host returned an error page. Check CMS_API_ORIGIN.",
+          code: "CMS_API_BAD_UPSTREAM",
+          status: upstream.status,
+          origin,
+        },
+        { status: 502 }
+      );
+    }
+    return upstream;
   } catch (err) {
     return Response.json(
       {
         error: "Could not reach the CMS API. Check CMS_API_ORIGIN and that the API server is running.",
         code: "CMS_API_UNREACHABLE",
+        origin,
       },
       { status: 502 }
     );
