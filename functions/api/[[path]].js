@@ -1,20 +1,20 @@
 /**
- * Proxies /api/* to the CMS Node API (free host).
+ * Proxies /api/* to the free Render CMS API.
  * CMS_API_ORIGIN Cloudflare secret overrides the default.
  */
-const FALLBACK_ORIGIN = "https://couple-soccer-gratis-immigrants.trycloudflare.com";
+const DEFAULT_CMS_API_ORIGIN = "https://shoveler-safari.onrender.com";
 
 export async function onRequest(context) {
-  let origin = (context.env.CMS_API_ORIGIN || FALLBACK_ORIGIN).replace(/\/$/, "");
-  // Drop dead paid Railway host if a stale secret remains
-  if (/railway\.app/i.test(origin)) {
-    origin = FALLBACK_ORIGIN;
+  let origin = (context.env.CMS_API_ORIGIN || DEFAULT_CMS_API_ORIGIN).replace(/\/$/, "");
+  // Never keep temporary laptop tunnels or old paid hosts
+  if (/trycloudflare\.com|railway\.app/i.test(origin)) {
+    origin = DEFAULT_CMS_API_ORIGIN;
   }
   if (!origin) {
     return Response.json(
       {
         error:
-          "CMS API is not connected. Set Cloudflare Pages env CMS_API_ORIGIN to your free host (Render / tunnel).",
+          "CMS API is not connected. Set Cloudflare Pages env CMS_API_ORIGIN to https://shoveler-safari.onrender.com",
         code: "CMS_API_ORIGIN_MISSING",
       },
       { status: 503 }
@@ -37,7 +37,6 @@ export async function onRequest(context) {
 
   try {
     const upstream = await fetch(target, init);
-    // If upstream is an HTML error page, surface a clear API error instead
     const ctype = upstream.headers.get("content-type") || "";
     if (!upstream.ok && ctype.includes("text/html")) {
       return Response.json(
