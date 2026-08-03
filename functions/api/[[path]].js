@@ -2,22 +2,15 @@
  * Proxies /api/* to the CMS Node server when CMS_API_ORIGIN is set
  * in Cloudflare Pages environment variables (e.g. https://cms.example.com).
  *
- * If CMS_API_ORIGIN is missing, return a clear JSON error so the admin
- * login does not silently fail with a generic password error.
+ * Free hosts (Render / temporary Cloudflare tunnel) are supported via CMS_API_ORIGIN.
  */
-const DEFAULT_CMS_API_ORIGIN = "https://shoveler-cms-api-production.up.railway.app";
-
 export async function onRequest(context) {
-  let origin = (context.env.CMS_API_ORIGIN || DEFAULT_CMS_API_ORIGIN).replace(/\/$/, "");
-  // Never keep temporary laptop tunnels in production
-  if (/trycloudflare\.com/i.test(origin)) {
-    origin = DEFAULT_CMS_API_ORIGIN;
-  }
+  const origin = (context.env.CMS_API_ORIGIN || "").replace(/\/$/, "");
   if (!origin) {
     return Response.json(
       {
         error:
-          "CMS API is not connected. Set Cloudflare Pages env CMS_API_ORIGIN to your Node CMS host (e.g. https://cms.yourhost.com).",
+          "CMS API is not connected. Set Cloudflare Pages env CMS_API_ORIGIN to your free Node CMS host (e.g. https://shoveler-cms-api.onrender.com).",
         code: "CMS_API_ORIGIN_MISSING",
       },
       { status: 503 }
@@ -25,7 +18,7 @@ export async function onRequest(context) {
   }
 
   const url = new URL(context.request.url);
-  const target = `${origin.replace(/\/$/, "")}${url.pathname}${url.search}`;
+  const target = `${origin}${url.pathname}${url.search}`;
   const headers = new Headers(context.request.headers);
   headers.delete("host");
 
