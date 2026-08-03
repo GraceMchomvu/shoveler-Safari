@@ -35,7 +35,7 @@ async function proxyToCms(context) {
     if (!upstream.ok && ctype.includes("text/html")) {
       return Response.json(
         {
-          error: "CMS API host returned an error page. Check CMS_API_ORIGIN.",
+          error: "CMS API host returned an error page. Check Render service status.",
           code: "CMS_API_BAD_UPSTREAM",
           status: upstream.status,
           origin,
@@ -47,7 +47,7 @@ async function proxyToCms(context) {
   } catch {
     return Response.json(
       {
-        error: "Could not reach the CMS API. Check CMS_API_ORIGIN and that Render is live.",
+        error: "Could not reach the CMS API on Render.",
         code: "CMS_API_UNREACHABLE",
         origin,
       },
@@ -61,12 +61,10 @@ export async function onRequest(context) {
   const { pathname, search } = url;
   const host = url.hostname.toLowerCase();
 
-  // Proxy API to free Render CMS (more reliable than functions/api/[[path]].js on some deploys)
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     return proxyToCms(context);
   }
 
-  // Canonical host: www
   if (host === "shovelersafari.com") {
     return Response.redirect(`https://www.shovelersafari.com${pathname}${search}`, 301);
   }

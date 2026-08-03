@@ -33,15 +33,21 @@ function ensureJwtSecret() {
     return;
   }
 
-  const generated = crypto.randomBytes(48).toString("hex");
-  process.env.JWT_SECRET = generated;
+  process.env.JWT_SECRET = crypto.randomBytes(48).toString("hex");
   console.warn(
-    `[boot] JWT_SECRET missing/weak — generated for this boot. Set JWT_SECRET on Render to keep sessions stable.`
+    "[boot] JWT_SECRET missing — generated for this boot. Set a fixed JWT_SECRET on Render."
   );
 }
 
-console.log("[boot] Preparing database...");
-run("npx", ["prisma", "db", "push", "--schema=prisma/schema.prisma", "--skip-generate", "--accept-data-loss"]);
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith("file:")) {
+  console.error(
+    "[fatal] DATABASE_URL must be a Postgres URL (Neon). SQLite on Render free resets on every sleep."
+  );
+  process.exit(1);
+}
+
+console.log("[boot] Preparing Postgres database...");
+run("npx", ["prisma", "db", "push", "--schema=prisma/schema.prisma", "--skip-generate"]);
 
 const prisma = new PrismaClient();
 const adminCount = await prisma.user.count({
@@ -49,17 +55,15 @@ const adminCount = await prisma.user.count({
 });
 
 if (adminCount === 0) {
-  console.log("[boot] No admin yet — seeding + creating admin once...");
+  console.log("[boot] No admin yet — seeding once...");
   run("npx", ["tsx", "prisma/seed.ts"]);
   run("node", ["scripts/fix-admin-login.mjs"]);
 } else {
-  console.log(`[boot] Admin exists (${adminCount}) — NOT resetting password`);
+  console.log(`[boot] Admin exists (${adminCount}) — password left unchanged`);
 }
 await prisma.$disconnect();
 
-const uploadDir = path.join(cmsRoot, process.env.UPLOAD_DIR || "./uploads");
-fs.mkdirSync(uploadDir, { recursive: true });
-
+fs.mkdirSync(path.join(cmsRoot, process.env.UPLOAD_DIR || "./uploads"), { recursive: true });
 ensureJwtSecret();
 
 const port = process.env.PORT || "4000";
