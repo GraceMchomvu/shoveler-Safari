@@ -16,10 +16,12 @@ services:
     startCommand: node scripts/docker-boot.mjs
     healthCheckPath: /api/health
     envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        value: file:./dev.db
       - key: UPLOAD_DIR
         value: ./uploads
       - key: CLIENT_ORIGIN
@@ -35,9 +37,9 @@ services:
       - key: SEED_ADMIN_PHONE
         value: "+255783591810"
       - key: SEED_ADMIN_PASSWORD
-        value: AdminPass123
-      - key: JWT_SECRET
-        generateValue: true
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
