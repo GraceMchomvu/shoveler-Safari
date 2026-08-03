@@ -15,8 +15,17 @@ dotenv.config({ path: path.join(cmsRoot, ".env") });
 
 if (isProduction()) {
   const secret = (process.env.JWT_SECRET || "").trim();
-  if (!secret || secret.length < 32 || secret === "change-me-in-production") {
-    console.error("[fatal] Set a strong JWT_SECRET (32+ chars) before starting in production.");
+  if (
+    !secret ||
+    secret.length < 32 ||
+    secret === "change-me-in-production" ||
+    secret === "dev-secret" ||
+    secret === "shoveler-cms-dev-secret-change-in-production"
+  ) {
+    console.error(
+      `[fatal] JWT_SECRET missing/weak (length=${secret.length}). ` +
+        "In Render: Environment → Add JWT_SECRET (32+ random characters) → Save → Manual Deploy."
+    );
     process.exit(1);
   }
 }
