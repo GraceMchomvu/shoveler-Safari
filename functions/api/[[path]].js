@@ -20,7 +20,7 @@ function rewriteSetCookieHeaders(upstream) {
 
 export async function onRequest(context) {
   let origin = (context.env.CMS_API_ORIGIN || DEFAULT_CMS_API_ORIGIN).replace(/\/$/, "");
-  if (/trycloudflare\.com|railway\.app/i.test(origin)) {
+  if (/railway\.app/i.test(origin)) {
     origin = DEFAULT_CMS_API_ORIGIN;
   }
   if (!origin) {

@@ -21,7 +21,8 @@ function rewriteSetCookieHeaders(upstream) {
 
 async function proxyToCms(context) {
   let origin = (context.env.CMS_API_ORIGIN || DEFAULT_CMS_API_ORIGIN).replace(/\/$/, "");
-  if (/trycloudflare\.com|railway\.app/i.test(origin)) {
+  // Allow trycloudflare recovery tunnels; only block accidental railway leftovers
+  if (/railway\.app/i.test(origin)) {
     origin = DEFAULT_CMS_API_ORIGIN;
   }
   if (!origin) {

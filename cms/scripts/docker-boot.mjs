@@ -49,6 +49,15 @@ if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith("file:")) {
 console.log("[boot] Preparing Postgres database...");
 run("npx", ["prisma", "db", "push", "--schema=prisma/schema.prisma", "--skip-generate"]);
 
+const oneShotMarker = path.join(cmsRoot, "scripts", ".one-shot-admin-reset");
+const oneShotReset = fs.existsSync(oneShotMarker);
+if (oneShotReset) {
+  process.env.FORCE_ADMIN_RESET = "1";
+  if (!process.env.SEED_ADMIN_PASSWORD) process.env.SEED_ADMIN_PASSWORD = "AdminPass123";
+  if (!process.env.SEED_ADMIN_EMAIL) process.env.SEED_ADMIN_EMAIL = "victorkiungai@gmail.com";
+  console.log("[boot] One-shot admin reset marker found — will reset admin password on this database");
+}
+
 const prisma = new PrismaClient();
 const adminCount = await prisma.user.count({
   where: { OR: [{ username: "admin" }, { role: "SUPER_ADMIN" }] },
@@ -61,10 +70,19 @@ if (adminCount === 0) {
   run("npx", ["tsx", "prisma/seed.ts"]);
   run("node", ["scripts/fix-admin-login.mjs"]);
 } else if (forceReset) {
-  console.log("[boot] FORCE_ADMIN_RESET=1 — resetting admin password on this database...");
+  console.log("[boot] FORCE_ADMIN_RESET — resetting admin password on this database...");
   run("node", ["scripts/fix-admin-login.mjs"]);
 } else {
   console.log(`[boot] Admin exists (${adminCount}) — password left unchanged`);
+}
+
+if (oneShotReset) {
+  try {
+    fs.unlinkSync(oneShotMarker);
+    console.log("[boot] Removed one-shot admin reset marker from this instance");
+  } catch {
+    /* image may be read-only in some hosts — next commit should delete the file */
+  }
 }
 await prisma.$disconnect();
 
