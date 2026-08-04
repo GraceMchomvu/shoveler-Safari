@@ -2,10 +2,14 @@ const DEFAULT_CMS_API_ORIGIN = "https://shoveler-safari.onrender.com";
 
 /** Forward upstream Set-Cookie as first-party cookies for www (strip Domain=). */
 function rewriteSetCookieHeaders(upstream) {
-  const raw =
-    typeof upstream.headers.getSetCookie === "function"
-      ? upstream.headers.getSetCookie()
-      : [];
+  let raw = [];
+  try {
+    if (typeof upstream.headers.getSetCookie === "function") {
+      raw = [...upstream.headers.getSetCookie()];
+    }
+  } catch (_) {
+    /* ignore */
+  }
   if (!raw.length) {
     const single = upstream.headers.get("set-cookie");
     if (single) raw.push(single);
@@ -66,7 +70,9 @@ async function proxyToCms(context) {
 
     const outHeaders = new Headers();
     upstream.headers.forEach((value, key) => {
-      if (key.toLowerCase() === "set-cookie") return;
+      const k = key.toLowerCase();
+      if (k === "set-cookie") return;
+      if (["content-encoding", "content-length", "transfer-encoding"].includes(k)) return;
       outHeaders.append(key, value);
     });
     for (const cookie of rewriteSetCookieHeaders(upstream)) {
@@ -74,7 +80,8 @@ async function proxyToCms(context) {
     }
     outHeaders.set("x-cms-proxy-origin", origin);
 
-    return new Response(upstream.body, {
+    const body = await upstream.arrayBuffer();
+    return new Response(body, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: outHeaders,
