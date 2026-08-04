@@ -19,8 +19,8 @@ export function LoginPage() {
     setError("");
     setBusy(true);
     try {
-      await login(loginId, password, totp || undefined);
-      navigate("/app"); // Protected route redirects to /change-password when required
+      const user = await login(loginId.trim(), password, totp || undefined);
+      navigate(user.mustChangePassword ? "/change-password" : "/app");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not sign in";
       if (msg === "2FA_REQUIRED") {
@@ -34,6 +34,8 @@ export function LoginPage() {
         setError(
           "The website admin server is not connected yet. Locally use http://localhost:5173/admin/ with the CMS running. On the live site, CMS_API_ORIGIN must point to your Node API."
         );
+      } else if (msg.includes("session cookie")) {
+        setError(msg);
       } else setError("Username or password is incorrect. Please try again.");
     } finally {
       setBusy(false);

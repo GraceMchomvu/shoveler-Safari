@@ -7,6 +7,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { ZodError } from "zod";
+import { prisma } from "./lib/prisma.js";
 import { isProduction } from "./lib/security.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -108,9 +109,33 @@ app.use(
 );
 app.use("/public", express.static(path.join(cmsRoot, "server/public"), { index: false, dotfiles: "deny" }));
 
-app.get("/api/health", (_req, res) =>
-  res.json({ ok: true, service: "shoveler-cms", env: isProduction() ? "production" : "development" })
-);
+app.get("/api/health", async (_req, res) => {
+  let dbHost = "unknown";
+  let adminCount = -1;
+  try {
+    const raw = process.env.DATABASE_URL || "";
+    if (raw.startsWith("file:")) dbHost = "sqlite";
+    else {
+      try {
+        dbHost = new URL(raw).hostname || "postgres";
+      } catch {
+        dbHost = "postgres";
+      }
+    }
+    adminCount = await prisma.user.count({
+      where: { OR: [{ username: "admin" }, { role: "SUPER_ADMIN" }] },
+    });
+  } catch {
+    /* keep defaults */
+  }
+  res.json({
+    ok: true,
+    service: "shoveler-cms",
+    env: isProduction() ? "production" : "development",
+    dbHost,
+    adminCount,
+  });
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/v1", publicRoutes);

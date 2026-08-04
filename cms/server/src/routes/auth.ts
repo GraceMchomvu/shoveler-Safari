@@ -108,7 +108,10 @@ router.post("/login", loginLimiter, async (req, res) => {
     ip: req.ip,
   });
 
+  // Return token so the admin SPA can use Authorization: Bearer when the
+  // proxied Set-Cookie is dropped (Cloudflare Pages → Render). Cookie still set.
   res.json({
+    token,
     user: {
       id: user.id,
       email: user.email,
@@ -410,6 +413,85 @@ router.post("/2fa/disable", requireAuth, async (req, res) => {
     data: { twoFactorEnabled: false, twoFactorSecret: null },
   });
   res.json({ ok: true });
+});
+
+/**
+ * One-shot recovery: reset the admin password when locked out.
+ * Requires EMERGENCY_RESET_SECRET (or JWT_SECRET) in the request body — never leave
+ * FORCE_ADMIN_RESET=1 set on Render after recovery.
+ */
+router.post("/emergency-reset", resetLimiter, async (req, res) => {
+  const schema = z.object({
+    secret: z.string().min(16),
+    password: passwordField.optional(),
+    email: z.string().email().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid request" });
+  }
+
+  const expected =
+    (process.env.EMERGENCY_RESET_SECRET || "").trim() ||
+    (process.env.JWT_SECRET || "").trim();
+  if (!expected || expected.length < 16) {
+    return res.status(503).json({ error: "Emergency reset is not configured" });
+  }
+
+  const provided = parsed.data.secret;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const password = parsed.data.password || process.env.SEED_ADMIN_PASSWORD || "AdminPass123";
+  const email = (parsed.data.email || process.env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
+  const phone = process.env.SEED_ADMIN_PHONE || "+255783591810";
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  let user = await prisma.user.findFirst({
+    where: { OR: [{ email }, { username: "admin" }] },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email,
+        username: "admin",
+        name: "Super Admin",
+        phone,
+        passwordHash,
+        role: "SUPER_ADMIN",
+        mustChangePassword: false,
+        active: true,
+      },
+    });
+  } else {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email,
+        username: "admin",
+        phone,
+        passwordHash,
+        mustChangePassword: false,
+        active: true,
+        role: "SUPER_ADMIN",
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+      },
+    });
+  }
+
+  await prisma.session.deleteMany({ where: { userId: user.id } });
+
+  res.json({
+    ok: true,
+    username: "admin",
+    email: user.email,
+    message: "Admin password reset. Sign in, then change the password in Account settings.",
+  });
 });
 
 export default router;

@@ -1,13 +1,13 @@
 # Free hosting for the CMS API (Render free tier).
 # Notes:
 # - Sleeps after ~15 min idle → first login can take 30–60s (cold start)
-# - No persistent disk → DB re-seeds on boot if empty
+# - Use Neon Postgres (DATABASE_URL) — never SQLite on Render free
 # - Outbound SMTP (Gmail :587) is blocked on free → password-reset email may not send
 # - Keep-alive: .github/workflows/keep-cms-awake.yml pings /api/health every 10 minutes
 
 services:
   - type: web
-    name: shoveler-cms-api
+    name: shoveler-safari
     runtime: node
     plan: free
     region: oregon
@@ -19,7 +19,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       - key: NODE_ENV
         value: production
       - key: UPLOAD_DIR
@@ -37,9 +37,12 @@ services:
       - key: SEED_ADMIN_PHONE
         value: "+255783591810"
       - key: SEED_ADMIN_PASSWORD
-        sync: false
+        value: "AdminPass123"
       - key: SEED_ADMIN_EMAIL
-        sync: false
+        value: "victorkiungai@gmail.com"
+      # One-time recovery — remove after admin can log in
+      - key: FORCE_ADMIN_RESET
+        value: "1"
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

@@ -56,7 +56,7 @@ if (!user) {
       phone,
       passwordHash,
       role: "SUPER_ADMIN",
-      mustChangePassword: true,
+      mustChangePassword: false,
       active: true,
     },
   });
@@ -69,11 +69,17 @@ if (!user) {
       username: "admin",
       phone,
       passwordHash,
-      mustChangePassword: true,
+      // Allow immediate dashboard access; password can be changed in Account settings
+      mustChangePassword: false,
       active: true,
       role: "SUPER_ADMIN",
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
     },
   });
+  // Kill old sessions so a new login is required with the reset password
+  const cleared = await prisma.session.deleteMany({ where: { userId: user.id } });
+  console.log(`Cleared ${cleared.count} old session(s)`);
 } else {
   console.log(`Admin already exists (${user.username || user.email}) — leaving password unchanged`);
 }

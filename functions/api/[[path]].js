@@ -1,5 +1,23 @@
 const DEFAULT_CMS_API_ORIGIN = "https://shoveler-safari.onrender.com";
 
+function rewriteSetCookieHeaders(upstream) {
+  const raw =
+    typeof upstream.headers.getSetCookie === "function"
+      ? upstream.headers.getSetCookie()
+      : [];
+  if (!raw.length) {
+    const single = upstream.headers.get("set-cookie");
+    if (single) raw.push(single);
+  }
+  return raw.map((c) =>
+    c
+      .split(";")
+      .map((p) => p.trim())
+      .filter((p) => p && !/^domain=/i.test(p))
+      .join("; ")
+  );
+}
+
 export async function onRequest(context) {
   let origin = (context.env.CMS_API_ORIGIN || DEFAULT_CMS_API_ORIGIN).replace(/\/$/, "");
   if (/trycloudflare\.com|railway\.app/i.test(origin)) {
@@ -30,7 +48,20 @@ export async function onRequest(context) {
   }
 
   try {
-    return await fetch(target, init);
+    const upstream = await fetch(target, init);
+    const outHeaders = new Headers();
+    upstream.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") return;
+      outHeaders.append(key, value);
+    });
+    for (const cookie of rewriteSetCookieHeaders(upstream)) {
+      outHeaders.append("set-cookie", cookie);
+    }
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: outHeaders,
+    });
   } catch {
     return Response.json(
       {

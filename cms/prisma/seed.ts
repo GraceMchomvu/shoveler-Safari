@@ -22,16 +22,28 @@ async function main() {
   const adminPhone = process.env.SEED_ADMIN_PHONE || "+255783591810";
   const adminEmail = (process.env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
 
+  const forceReset =
+    process.env.FORCE_ADMIN_RESET === "1" || process.env.FORCE_ADMIN_RESET === "true";
+
+  // Never overwrite an existing admin password unless FORCE_ADMIN_RESET is set.
+  // Overwriting on every seed/boot was permanently breaking live login.
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {
-      username: "admin",
-      passwordHash,
-      phone: adminPhone,
-      mustChangePassword: true,
-      active: true,
-      role: Role.SUPER_ADMIN,
-    },
+    update: forceReset
+      ? {
+          username: "admin",
+          passwordHash,
+          phone: adminPhone,
+          mustChangePassword: false,
+          active: true,
+          role: Role.SUPER_ADMIN,
+        }
+      : {
+          username: "admin",
+          phone: adminPhone,
+          active: true,
+          role: Role.SUPER_ADMIN,
+        },
     create: {
       email: adminEmail,
       username: "admin",
@@ -39,22 +51,24 @@ async function main() {
       phone: adminPhone,
       passwordHash,
       role: Role.SUPER_ADMIN,
-      mustChangePassword: true,
+      mustChangePassword: false,
     },
   });
 
-  // Legacy seed email — keep in sync so old bookmarks still work
+  // Legacy seed email — create if missing; do not reset password on updates
   if (adminEmail !== "admin@shovelersafari.com") {
     await prisma.user.upsert({
       where: { email: "admin@shovelersafari.com" },
-      update: { passwordHash, username: null, active: true },
+      update: forceReset
+        ? { passwordHash, username: null, active: true, mustChangePassword: false }
+        : { active: true },
       create: {
         email: "admin@shovelersafari.com",
         name: "Super Admin (legacy)",
         phone: adminPhone,
         passwordHash,
         role: Role.SUPER_ADMIN,
-        mustChangePassword: true,
+        mustChangePassword: false,
       },
     });
   }

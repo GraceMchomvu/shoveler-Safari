@@ -15,7 +15,7 @@ jobs:
           set -e
           URL="${{ vars.CMS_HEALTH_URL }}"
           if [ -z "$URL" ]; then
-            URL="https://shoveler-cms-api.onrender.com/api/health"
+            URL="https://shoveler-safari.onrender.com/api/health"
           fi
           echo "Pinging $URL"
           curl -fsS --max-time 90 "$URL" || true

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { spawnSync } from "child_process";
-import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -33,10 +32,11 @@ function ensureJwtSecret() {
     return;
   }
 
-  process.env.JWT_SECRET = crypto.randomBytes(48).toString("hex");
-  console.warn(
-    "[boot] JWT_SECRET missing — generated for this boot. Set a fixed JWT_SECRET on Render."
+  // Never mint an ephemeral secret in production — it invalidates every login after each Render sleep/restart.
+  console.error(
+    "[fatal] JWT_SECRET must be set to a fixed value (≥32 chars) on Render. Refusing to start with a random secret."
   );
+  process.exit(1);
 }
 
 if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith("file:")) {
@@ -53,10 +53,15 @@ const prisma = new PrismaClient();
 const adminCount = await prisma.user.count({
   where: { OR: [{ username: "admin" }, { role: "SUPER_ADMIN" }] },
 });
+const forceReset =
+  process.env.FORCE_ADMIN_RESET === "1" || process.env.FORCE_ADMIN_RESET === "true";
 
 if (adminCount === 0) {
   console.log("[boot] No admin yet — seeding once...");
   run("npx", ["tsx", "prisma/seed.ts"]);
+  run("node", ["scripts/fix-admin-login.mjs"]);
+} else if (forceReset) {
+  console.log("[boot] FORCE_ADMIN_RESET=1 — resetting admin password on this database...");
   run("node", ["scripts/fix-admin-login.mjs"]);
 } else {
   console.log(`[boot] Admin exists (${adminCount}) — password left unchanged`);
