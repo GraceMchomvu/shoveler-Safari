@@ -24,12 +24,18 @@ https://neon.new/database/8ad36383-bdef-4981-9794-8b628c045c05
 
 ## After deploy
 1. Sync customer GitHub fork from GraceMchomvu/shoveler-Safari
-2. Render → Manual Deploy latest
-3. Login https://www.shovelersafari.com/admin/
-   - username: admin
-   - password: AdminPass123
-4. Change password once — it will stick
+2. Render → Manual Deploy latest (required for API code updates)
+3. Confirm Render `DATABASE_URL` is the Neon Postgres URL (not SQLite)
+4. Login https://www.shovelersafari.com/admin/
+   - username: `admin`
+   - password: `AdminPass123` (only after a reset / first setup)
+5. Change password in Account settings — it will stick (seed/boot will not overwrite it)
+
+## Cloudflare Pages
+- Secret `CMS_API_ORIGIN` must be the live API origin (no trailing slash), e.g. `https://shoveler-safari.onrender.com`
+- Admin login uses cookie + Bearer token fallback so sessions survive the Pages → API proxy
 
 ## Do not
 - Do not use SQLite on Render free (disk is wiped when the service sleeps)
-- Do not set FORCE_ADMIN_RESET=1 in production unless intentionally resetting admin
+- Do not leave `FORCE_ADMIN_RESET=1` set on Render (it resets the admin password on every wake)
+- Do not let the Neon claimable database expire — claim it: https://neon.new/database/8ad36383-bdef-4981-9794-8b628c045c05

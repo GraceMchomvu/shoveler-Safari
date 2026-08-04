@@ -72,6 +72,7 @@ async function proxyToCms(context) {
     for (const cookie of rewriteSetCookieHeaders(upstream)) {
       outHeaders.append("set-cookie", cookie);
     }
+    outHeaders.set("x-cms-proxy-origin", origin);
 
     return new Response(upstream.body, {
       status: upstream.status,

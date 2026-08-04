@@ -40,9 +40,6 @@ services:
         value: "AdminPass123"
       - key: SEED_ADMIN_EMAIL
         value: "victorkiungai@gmail.com"
-      # One-time recovery — remove after admin can log in
-      - key: FORCE_ADMIN_RESET
-        value: "1"
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
