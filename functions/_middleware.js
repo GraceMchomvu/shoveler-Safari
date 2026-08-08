@@ -1,3 +1,5 @@
+import { handleEdgePocket, isEdgePocketPath } from "./_lib/edge-pocket.js";
+
 const DEFAULT_CMS_API_ORIGIN = "https://shoveler-safari.onrender.com";
 
 /** Forward upstream Set-Cookie as first-party cookies for www (strip Domain=). */
@@ -25,14 +27,13 @@ function rewriteSetCookieHeaders(upstream) {
 
 async function proxyToCms(context) {
   let origin = (context.env.CMS_API_ORIGIN || DEFAULT_CMS_API_ORIGIN).replace(/\/$/, "");
-  // Allow trycloudflare recovery tunnels; only block accidental railway leftovers
   if (/railway\.app/i.test(origin)) {
     origin = DEFAULT_CMS_API_ORIGIN;
   }
   if (!origin) {
     return Response.json(
       {
-        error: "CMS API is not connected. Set CMS_API_ORIGIN to https://shoveler-safari.onrender.com",
+        error: "Legacy CMS API origin missing. EdgePocket handles login without it.",
         code: "CMS_API_ORIGIN_MISSING",
       },
       { status: 503 }
@@ -59,7 +60,7 @@ async function proxyToCms(context) {
     if (!upstream.ok && ctype.includes("text/html")) {
       return Response.json(
         {
-          error: "CMS API host returned an error page. Check Render service status.",
+          error: "CMS API host returned an error page.",
           code: "CMS_API_BAD_UPSTREAM",
           status: upstream.status,
           origin,
@@ -89,7 +90,7 @@ async function proxyToCms(context) {
   } catch {
     return Response.json(
       {
-        error: "Could not reach the CMS API on Render.",
+        error: "Could not reach the legacy CMS API.",
         code: "CMS_API_UNREACHABLE",
         origin,
       },
@@ -103,8 +104,37 @@ export async function onRequest(context) {
   const { pathname, search } = url;
   const host = url.hostname.toLowerCase();
 
+  // EdgePocket (default ON): login/session/health never touch Render
+  const edgeOn = String(context.env.EDGE_POCKET || "1") !== "0";
+  if (edgeOn && isEdgePocketPath(pathname)) {
+    try {
+      const edgeRes = await handleEdgePocket(context);
+      if (edgeRes) return edgeRes;
+    } catch (err) {
+      return Response.json(
+        {
+          error: err instanceof Error ? err.message : "EdgePocket error",
+          code: "EDGE_POCKET_ERROR",
+        },
+        { status: 500 }
+      );
+    }
+  }
+
   if (pathname === "/api" || pathname.startsWith("/api/")) {
-    return proxyToCms(context);
+    // Optional legacy Render proxy for old CMS modules (can be disabled)
+    if (String(context.env.LEGACY_CMS_PROXY || "0") === "1") {
+      return proxyToCms(context);
+    }
+    return Response.json(
+      {
+        error:
+          "This admin action is not on EdgePocket yet. Login/dashboard work without Render. Set LEGACY_CMS_PROXY=1 only if you still need the old API.",
+        code: "EDGE_POCKET_ONLY",
+        path: pathname,
+      },
+      { status: 501 }
+    );
   }
 
   if (host === "shovelersafari.com") {

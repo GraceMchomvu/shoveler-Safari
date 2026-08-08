@@ -1,0 +1,6 @@
+﻿# Copy values after: npx wrangler kv namespace create EDGE_KV
+# Bind EDGE_KV in Cloudflare Pages → Settings → Functions
+
+name = "shoveler-safari"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "."
