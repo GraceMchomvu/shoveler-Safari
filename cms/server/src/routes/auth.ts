@@ -145,18 +145,31 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 router.post("/forgot-password", forgotLimiter, async (req, res) => {
-  const parsed = z.object({ email: z.string().email() }).safeParse(req.body);
+  const parsed = z
+    .object({
+      email: z.string().email().optional(),
+      login: z.string().min(1).optional(),
+    })
+    .safeParse(req.body);
   const generic = {
     ok: true,
     message:
-      "If that account exists, we sent a verification code and reset link by email and WhatsApp (when a phone number is on file).",
+      "If that account exists, we sent a 6-digit code and reset link by email (and WhatsApp if a phone is on file).",
   };
   if (!parsed.success) return res.json(generic);
 
-  const email = parsed.data.email.toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email } });
+  const loginId = (parsed.data.login || parsed.data.email || "").trim().toLowerCase();
+  if (!loginId) return res.json(generic);
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: loginId }, { username: loginId }],
+      active: true,
+    },
+  });
   // Always return ok to avoid enumeration
-  if (user && user.active) {
+  if (user) {
+    const email = user.email;
     const token = crypto.randomBytes(32).toString("hex");
     const code = String(crypto.randomInt(100000, 999999));
     const codeHash = await bcrypt.hash(code, 10);

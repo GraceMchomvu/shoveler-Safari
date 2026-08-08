@@ -45,7 +45,11 @@ export function LoginPage() {
   return (
     <AuthShell title="Sign in to your website">
       <p className="text-sm text-[var(--muted)] mb-4">
-        Sign in with your <strong>username</strong> (or email) and password.
+        Sign in with your <strong>username</strong> (or email) and password. Forgot it? Use{" "}
+        <Link to="/forgot-password" className="underline">
+          email reset
+        </Link>
+        .
       </p>
       <form onSubmit={onSubmit} className="space-y-3">
         <Field label="Username or email" hint="Example: admin">
@@ -85,28 +89,34 @@ export function LoginPage() {
 }
 
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   return (
     <AuthShell title="Forgot password">
       <p className="text-sm text-[var(--muted)] mb-4">
-        Enter your admin email. We will send a <strong>6-digit verification code</strong> and a
-        reset link by <strong>email</strong> and <strong>WhatsApp</strong> (if a phone number is
-        saved on your account).
+        Enter your <strong>admin email</strong> (or username). We’ll email a{" "}
+        <strong>6-digit code</strong> and a reset link. WhatsApp is used only if a phone number is
+        saved on the account.
       </p>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
           try {
+            const value = loginId.trim();
+            const body = value.includes("@")
+              ? { email: value, login: value }
+              : { login: value };
             const data = await api<{ message: string }>("/api/auth/forgot-password", {
               method: "POST",
-              body: JSON.stringify({ email }),
+              body: JSON.stringify(body),
             });
             setMsg(data.message);
-            navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+            navigate(
+              `/reset-password${value.includes("@") ? `?email=${encodeURIComponent(value)}` : ""}`
+            );
           } catch (err) {
             setMsg(err instanceof Error ? err.message : "Could not start reset");
           } finally {
@@ -115,16 +125,16 @@ export function ForgotPasswordPage() {
         }}
         className="space-y-3"
       >
-        <Field label="Email">
+        <Field label="Email or username" hint="Example: victorkiungai@gmail.com or admin">
           <input
             className={inputClass}
             autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value)}
           />
         </Field>
         <Btn type="submit" disabled={busy} className="w-full">
-          {busy ? "Sending…" : "Send code & reset link"}
+          {busy ? "Sending…" : "Email me a reset code"}
         </Btn>
       </form>
       {msg && <p className="text-sm mt-3 text-green-800">{msg}</p>}
