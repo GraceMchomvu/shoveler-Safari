@@ -377,8 +377,20 @@ export async function handleEdgePocket(context) {
         pages: 0,
         posts: 0,
         media: 0,
-        comments: 0,
+        users: 1,
+        pendingComments: 0,
+        formSubmissions: 0,
+        visitors: 0,
       },
+      recent: [
+        {
+          id: "edge-1",
+          action: "login",
+          entity: "user",
+          createdAt: new Date().toISOString(),
+          user: { name: sess.user.name },
+        },
+      ],
       message:
         "Logged in via EdgePocket (Cloudflare). Full content modules can be added here next — login no longer depends on Render.",
       user: publicUser(sess.user),
