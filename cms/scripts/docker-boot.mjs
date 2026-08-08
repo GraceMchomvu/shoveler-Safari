@@ -68,37 +68,29 @@ if (adminCount === 0) {
   run("npx", ["tsx", "prisma/seed.ts"]);
 }
 
-// Pin a known working admin login in the durable DB (does not depend on Render disk).
-// Marker lives IN POSTGRES so it survives deploys; password is only re-pinned when marker missing
-// or when PIN_ADMIN_PASSWORD=1 is set intentionally.
-const pinAlways = process.env.PIN_ADMIN_PASSWORD === "1" || process.env.PIN_ADMIN_PASSWORD === "true";
-let pinMarker = null;
-try {
-  pinMarker = await prisma.setting.findUnique({ where: { id: "admin_password_pinned_v2" } });
-} catch {
-  /* setting table may not exist yet — db push above should have created it */
-}
-
-if (!pinMarker || pinAlways) {
-  console.log("[boot] Pinning admin login to durable Neon credentials...");
-  const passwordHash = await bcrypt.hash(PINNED_ADMIN_PASSWORD, 12);
-  let user = await prisma.user.findFirst({
-    where: { OR: [{ email: PINNED_ADMIN_EMAIL }, { username: "admin" }] },
+// ALWAYS ensure known admin credentials on Neon after every boot.
+// Render free was reseeding ephemeral storage and breaking login; this makes login stable.
+console.log("[boot] Ensuring durable admin credentials on Neon...");
+const passwordHash = await bcrypt.hash(PINNED_ADMIN_PASSWORD, 12);
+let user = await prisma.user.findFirst({
+  where: { OR: [{ email: PINNED_ADMIN_EMAIL }, { username: "admin" }] },
+});
+if (!user) {
+  user = await prisma.user.create({
+    data: {
+      email: PINNED_ADMIN_EMAIL,
+      username: "admin",
+      name: "Super Admin",
+      phone: PINNED_ADMIN_PHONE,
+      passwordHash,
+      role: "SUPER_ADMIN",
+      mustChangePassword: false,
+      active: true,
+    },
   });
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        email: PINNED_ADMIN_EMAIL,
-        username: "admin",
-        name: "Super Admin",
-        phone: PINNED_ADMIN_PHONE,
-        passwordHash,
-        role: "SUPER_ADMIN",
-        mustChangePassword: false,
-        active: true,
-      },
-    });
-  } else {
+} else {
+  const matches = await bcrypt.compare(PINNED_ADMIN_PASSWORD, user.passwordHash);
+  if (!matches || user.mustChangePassword || user.username !== "admin" || !user.active) {
     user = await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -113,20 +105,13 @@ if (!pinMarker || pinAlways) {
         twoFactorSecret: null,
       },
     });
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+    console.log("[boot] Admin password repaired");
+  } else {
+    console.log("[boot] Admin credentials already correct");
   }
-  await prisma.session.deleteMany({ where: { userId: user.id } });
-  await prisma.setting.upsert({
-    where: { id: "admin_password_pinned_v2" },
-    update: { data: JSON.stringify({ at: new Date().toISOString(), email: PINNED_ADMIN_EMAIL }) },
-    create: {
-      id: "admin_password_pinned_v2",
-      data: JSON.stringify({ at: new Date().toISOString(), email: PINNED_ADMIN_EMAIL }),
-    },
-  });
-  console.log(`[boot] Admin ready — username: admin / password: ${PINNED_ADMIN_PASSWORD}`);
-} else {
-  console.log("[boot] Admin password pin marker present — leaving password unchanged");
 }
+console.log(`[boot] Admin login: username=admin password=${PINNED_ADMIN_PASSWORD}`);
 
 await prisma.$disconnect();
 

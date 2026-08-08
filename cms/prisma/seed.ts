@@ -14,7 +14,7 @@ function makePassword() {
 }
 
 async function main() {
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "AdminPass123";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "SafariAdmin2026!";
   const editorPassword = process.env.SEED_EDITOR_PASSWORD || makePassword();
   const authorPassword = process.env.SEED_AUTHOR_PASSWORD || makePassword();
   const passwordHash = await bcrypt.hash(adminPassword, 12);
