@@ -19,6 +19,14 @@ export function LoginPage() {
     setError("");
     setBusy(true);
     try {
+      // Free Render sleeps — wake it before login so the first attempt is not a false failure.
+      setError("Waking the free admin server (up to 60s)…");
+      try {
+        await fetch("/api/health", { credentials: "include" });
+      } catch {
+        /* continue to login anyway */
+      }
+      setError("");
       const user = await login(loginId.trim(), password, totp || undefined);
       navigate(user.mustChangePassword ? "/change-password" : "/app");
     } catch (err) {
@@ -26,17 +34,24 @@ export function LoginPage() {
       if (msg === "2FA_REQUIRED") {
         setNeed2fa(true);
         setError("Please enter the 6-digit code from your phone app.");
+      } else if (/too many login/i.test(msg)) {
+        setError("Too many login attempts. Wait about 15 minutes, then try again.");
       } else if (
         msg.includes("CMS API") ||
         msg.includes("CMS_API_ORIGIN") ||
-        msg.includes("Could not reach")
+        msg.includes("Could not reach") ||
+        /502|503|unreachable/i.test(msg)
       ) {
         setError(
-          "The website admin server is not connected yet. Locally use http://localhost:5173/admin/ with the CMS running. On the live site, CMS_API_ORIGIN must point to your Node API."
+          "Admin server is waking up or offline. Wait 30–60 seconds and try again (free Render sleep)."
         );
       } else if (msg.includes("session cookie")) {
         setError(msg);
-      } else setError("Username or password is incorrect. Please try again.");
+      } else if (/invalid credentials|unauthorized|incorrect/i.test(msg)) {
+        setError("Username or password is incorrect. Please try again.");
+      } else {
+        setError(msg || "Could not sign in. Please try again.");
+      }
     } finally {
       setBusy(false);
     }
@@ -76,8 +91,11 @@ export function LoginPage() {
         )}
         {error && <p className="text-sm text-red-700">{error}</p>}
         <Btn type="submit" disabled={busy} className="w-full">
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? "Please wait…" : "Sign in"}
         </Btn>
+        <p className="text-xs text-[var(--muted)] text-center">
+          Free hosting may take up to a minute on the first try after idle.
+        </p>
       </form>
       <p className="text-sm mt-4 text-center">
         <Link to="/forgot-password" className="underline">

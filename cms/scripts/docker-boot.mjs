@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 /**
- * Production boot — durable Neon Postgres + stable admin login.
- * Secrets MUST come from environment (Render Dashboard). Never hardcode them.
+ * Production boot — Postgres + admin seed.
+ * Secrets MUST come from environment. Never hardcode them.
+ *
+ * Password behavior:
+ * - First boot: create admin from SEED_ADMIN_* if missing
+ * - Later boots: leave the password alone (survives restarts)
+ * - Optional repair: set FORCE_SEED_ADMIN_PASSWORD=true to reset from SEED_ADMIN_PASSWORD
  */
 import { spawnSync } from "child_process";
 import fs from "fs";
@@ -16,6 +21,9 @@ process.chdir(cmsRoot);
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "SafariAdmin2026!";
 const ADMIN_EMAIL = (process.env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
 const ADMIN_PHONE = process.env.SEED_ADMIN_PHONE || "+255783591810";
+const FORCE_SEED =
+  String(process.env.FORCE_SEED_ADMIN_PASSWORD || "").toLowerCase() === "true" ||
+  process.env.FORCE_SEED_ADMIN_PASSWORD === "1";
 
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, {
@@ -30,7 +38,7 @@ function run(cmd, args, opts = {}) {
 const dbUrl = (process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "").trim();
 if (!dbUrl || dbUrl.startsWith("file:") || !/^postgres(ql)?:\/\//i.test(dbUrl)) {
   console.error(
-    "[fatal] DATABASE_URL must be a Postgres URL from Neon (set it in Render → Environment). SQLite is not allowed."
+    "[fatal] DATABASE_URL must be a Postgres URL (set it in the host environment / docker compose)."
   );
   process.exit(1);
 }
@@ -46,7 +54,7 @@ if (
   jwt === "shoveler-cms-dev-secret-change-in-production"
 ) {
   console.error(
-    "[fatal] JWT_SECRET must be a fixed random value (≥32 chars) in Render → Environment."
+    "[fatal] JWT_SECRET must be a fixed random value (≥32 chars) in the host environment."
   );
   process.exit(1);
 }
@@ -68,7 +76,7 @@ if (adminCount === 0) {
   run("npx", ["tsx", "prisma/seed.ts"]);
 }
 
-console.log("[boot] Ensuring admin credentials...");
+console.log("[boot] Checking admin account...");
 const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 let user = await prisma.user.findFirst({
   where: { OR: [{ email: ADMIN_EMAIL }, { username: "admin" }] },
@@ -88,31 +96,39 @@ if (!user) {
     },
   });
   console.log("[boot] Created admin");
+} else if (FORCE_SEED) {
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      email: ADMIN_EMAIL,
+      username: "admin",
+      phone: ADMIN_PHONE,
+      passwordHash,
+      mustChangePassword: false,
+      active: true,
+      role: "SUPER_ADMIN",
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+    },
+  });
+  await prisma.session.deleteMany({ where: { userId: user.id } });
+  console.log("[boot] Forced admin password reset from SEED_ADMIN_PASSWORD");
 } else {
-  const matches = await bcrypt.compare(ADMIN_PASSWORD, user.passwordHash);
-  if (!matches || user.mustChangePassword || !user.active || user.username !== "admin") {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        email: ADMIN_EMAIL,
-        username: "admin",
-        phone: ADMIN_PHONE,
-        passwordHash,
-        mustChangePassword: false,
-        active: true,
-        role: "SUPER_ADMIN",
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-      },
-    });
-    await prisma.session.deleteMany({ where: { userId: user.id } });
-    console.log("[boot] Repaired admin login");
+  // Keep login durable: do not overwrite password on normal restarts.
+  const patch = {};
+  if (!user.active) patch.active = true;
+  if (user.username !== "admin") patch.username = "admin";
+  if (user.role !== "SUPER_ADMIN") patch.role = "SUPER_ADMIN";
+  if (user.email !== ADMIN_EMAIL) patch.email = ADMIN_EMAIL;
+  if (Object.keys(patch).length) {
+    await prisma.user.update({ where: { id: user.id }, data: patch });
+    console.log("[boot] Admin account fields refreshed (password unchanged)");
   } else {
-    console.log("[boot] Admin login already healthy");
+    console.log("[boot] Admin login already healthy (password unchanged)");
   }
 }
 
-console.log("[boot] Ready — username: admin (password from SEED_ADMIN_PASSWORD)");
+console.log("[boot] Ready — username: admin");
 await prisma.$disconnect();
 
 fs.mkdirSync(path.join(cmsRoot, process.env.UPLOAD_DIR || "./uploads"), { recursive: true });
