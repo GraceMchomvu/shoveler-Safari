@@ -1,8 +1,5 @@
 # Free hosting for the CMS API (Render free tier).
-# Notes:
-# - Sleeps after ~15 min idle → first login can take 30–60s (cold start)
-# - DATABASE_URL must be Neon Postgres (also hard-fallback in docker-boot.mjs)
-# - Keep-alive: .github/workflows/keep-cms-awake.yml pings /api/health every 10 minutes
+# Secrets (DATABASE_URL, JWT_SECRET, SMTP_*) must be set in the Render Dashboard — never commit them.
 
 services:
   - type: web
@@ -16,9 +13,9 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
-        value: postgresql://neondb_owner:npg_B8MQlfP2vSwc@ep-cold-fog-ay7d1318-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require
+        sync: false
       - key: JWT_SECRET
-        value: 16721ed6c057db74221bf93025f647bb655c037073c64724dc43edb998f747f98c465e977e05c302f99f422b69205f8f
+        sync: false
       - key: NODE_ENV
         value: production
       - key: UPLOAD_DIR
@@ -36,9 +33,9 @@ services:
       - key: SEED_ADMIN_PHONE
         value: "+255783591810"
       - key: SEED_ADMIN_PASSWORD
-        value: "SafariAdmin2026!"
+        sync: false
       - key: SEED_ADMIN_EMAIL
-        value: "victorkiungai@gmail.com"
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

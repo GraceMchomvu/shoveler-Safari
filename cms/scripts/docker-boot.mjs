@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 /**
- * Production boot — boring & stable auth:
- * - Always use Neon Postgres (never Render ephemeral disk / SQLite)
- * - Fixed JWT secret fallback
- * - Ensure admin login works every start
+ * Production boot — durable Neon Postgres + stable admin login.
+ * Secrets MUST come from environment (Render Dashboard). Never hardcode them.
  */
 import { spawnSync } from "child_process";
 import fs from "fs";
@@ -15,10 +13,6 @@ import bcrypt from "bcryptjs";
 const cmsRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.chdir(cmsRoot);
 
-const NEON_DATABASE_URL =
-  "postgresql://neondb_owner:npg_B8MQlfP2vSwc@ep-cold-fog-ay7d1318-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require";
-const FIXED_JWT_SECRET =
-  "16721ed6c057db74221bf93025f647bb655c037073c64724dc43edb998f747f98c465e977e05c302f99f422b69205f8f";
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "SafariAdmin2026!";
 const ADMIN_EMAIL = (process.env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
 const ADMIN_PHONE = process.env.SEED_ADMIN_PHONE || "+255783591810";
@@ -33,17 +27,30 @@ function run(cmd, args, opts = {}) {
   if (r.status !== 0) process.exit(r.status || 1);
 }
 
-// ALWAYS Neon — ignore misconfigured / ephemeral Render DATABASE_URL
-process.env.DATABASE_URL = (process.env.NEON_DATABASE_URL || NEON_DATABASE_URL).trim();
-console.log("[boot] Using durable Neon Postgres");
+const dbUrl = (process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "").trim();
+if (!dbUrl || dbUrl.startsWith("file:") || !/^postgres(ql)?:\/\//i.test(dbUrl)) {
+  console.error(
+    "[fatal] DATABASE_URL must be a Postgres URL from Neon (set it in Render → Environment). SQLite is not allowed."
+  );
+  process.exit(1);
+}
+process.env.DATABASE_URL = dbUrl;
+console.log("[boot] Using Postgres DATABASE_URL from environment");
 
 const jwt = (process.env.JWT_SECRET || "").trim();
-if (!jwt || jwt.length < 32 || jwt === "change-me-in-production" || jwt === "dev-secret") {
-  process.env.JWT_SECRET = FIXED_JWT_SECRET;
-  console.warn("[boot] JWT_SECRET missing/weak — using fixed production secret");
-} else {
-  console.log(`[boot] JWT_SECRET ok (length ${jwt.length})`);
+if (
+  !jwt ||
+  jwt.length < 32 ||
+  jwt === "change-me-in-production" ||
+  jwt === "dev-secret" ||
+  jwt === "shoveler-cms-dev-secret-change-in-production"
+) {
+  console.error(
+    "[fatal] JWT_SECRET must be a fixed random value (≥32 chars) in Render → Environment."
+  );
+  process.exit(1);
 }
+console.log(`[boot] JWT_SECRET ok (length ${jwt.length})`);
 
 console.log("[boot] Syncing schema...");
 run("npx", ["prisma", "db", "push", "--schema=prisma/schema.prisma", "--skip-generate"]);
@@ -105,7 +112,7 @@ if (!user) {
   }
 }
 
-console.log(`[boot] Ready — username: admin / password: ${ADMIN_PASSWORD}`);
+console.log("[boot] Ready — username: admin (password from SEED_ADMIN_PASSWORD)");
 await prisma.$disconnect();
 
 fs.mkdirSync(path.join(cmsRoot, process.env.UPLOAD_DIR || "./uploads"), { recursive: true });
