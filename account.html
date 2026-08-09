@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account — Shoveler Safari</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1c14;
+      --panel: rgba(255, 252, 245, 0.96);
+      --ink: #142018;
+      --muted: #5a6b5e;
+      --line: #d5ddD6;
+      --accent: #2f6b3a;
+      --accent-ink: #f7fff8;
+      --danger: #9b2c2c;
+      --ok: #1f6b3a;
+      --warn: #b7791f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(74, 140, 90, 0.35), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(201, 162, 39, 0.18), transparent 50%),
+        linear-gradient(160deg, #0f1c14 0%, #183222 45%, #0d1711 100%);
+    }
+    .wrap {
+      width: min(920px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2.5rem 0 4rem;
+    }
+    .brand {
+      color: #f4efe4;
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      margin: 0 0 0.35rem;
+      letter-spacing: -0.02em;
+    }
+    .sub { color: rgba(244, 239, 228, 0.78); margin: 0 0 1.75rem; }
+    .grid {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 800px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 18px;
+      padding: 1.4rem 1.35rem 1.5rem;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.22);
+    }
+    h2 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 1.25rem;
+      margin: 0 0 0.35rem;
+    }
+    .hint { color: var(--muted); font-size: 0.92rem; margin: 0 0 1.1rem; line-height: 1.45; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin: 0.85rem 0 0.35rem;
+    }
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.75rem 0.85rem;
+      font: inherit;
+      background: #fff;
+    }
+    input:focus {
+      outline: 2px solid rgba(47, 107, 58, 0.35);
+      border-color: var(--accent);
+    }
+    .strength {
+      margin-top: 0.55rem;
+      height: 8px;
+      border-radius: 999px;
+      background: #e7ece8;
+      overflow: hidden;
+    }
+    .strength > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      transition: width 0.2s ease, background 0.2s ease;
+    }
+    .strength-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      min-height: 1.1em;
+    }
+    .btn {
+      margin-top: 1.15rem;
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.85rem 1rem;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+    .btn:disabled { opacity: 0.6; cursor: wait; }
+    .btn.secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid rgba(47, 107, 58, 0.45);
+    }
+    .msg {
+      margin-top: 0.9rem;
+      padding: 0.7rem 0.8rem;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      display: none;
+    }
+    .msg.show { display: block; }
+    .msg.error { background: #fde8e8; color: var(--danger); }
+    .msg.ok { background: #e8f7ee; color: var(--ok); }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .links a {
+      color: rgba(244, 239, 228, 0.9);
+      font-size: 0.92rem;
+    }
+    .gate, .app { display: none; }
+    .gate.show, .app.show { display: block; }
+    .gate .card { max-width: 440px; }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 14, 10, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 40;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: min(480px, 100%);
+      background: #fffaf2;
+      border-radius: 16px;
+      padding: 1.25rem 1.2rem 1.35rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    .modal h3 { margin: 0 0 0.5rem; font-family: Fraunces, Georgia, serif; }
+    .modal code, .modal .url {
+      display: block;
+      word-break: break-all;
+      background: #eef3ef;
+      border-radius: 8px;
+      padding: 0.7rem 0.75rem;
+      font-size: 0.82rem;
+      margin: 0.75rem 0 1rem;
+    }
+    .modal-actions { display: flex; gap: 0.6rem; }
+    .modal-actions .btn { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1 class="brand">Shoveler Safari</h1>
+        <p class="sub">Account password management</p>
+      </div>
+      <div class="links">
+        <a href="/admin/">Admin</a> ·
+        <a href="/">Website</a>
+      </div>
+    </div>
+
+    <section id="gate" class="gate">
+      <div class="card">
+        <h2>Sign in required</h2>
+        <p class="hint">Open the admin login first, then return here to change your password. Forgot password works without being signed in.</p>
+        <a class="btn" href="/admin/" style="display:inline-block;text-align:center;text-decoration:none;">Go to admin login</a>
+        <button class="btn secondary" type="button" id="showForgotFromGate">Forgot password instead</button>
+        <div id="gateForgot" style="display:none;margin-top:1rem;">
+          <label for="gateEmail">Account email</label>
+          <input id="gateEmail" type="email" autocomplete="email" placeholder="you@example.com" />
+          <button class="btn" type="button" id="gateForgotBtn">Send reset link</button>
+          <div id="gateForgotMsg" class="msg"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="app" class="app">
+      <div class="grid">
+        <div class="card">
+          <h2>Change password</h2>
+          <p class="hint">Enter your current password, then choose a stronger new one.</p>
+          <form id="changeForm">
+            <label for="currentPassword">Current password</label>
+            <input id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required />
+
+            <label for="newPassword">New password</label>
+            <input id="newPassword" name="newPassword" type="password" autocomplete="new-password" required />
+            <div class="strength" aria-hidden="true"><span id="strengthBar"></span></div>
+            <div class="strength-label" id="strengthLabel"></div>
+
+            <label for="confirmPassword">Confirm new password</label>
+            <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required />
+
+            <button class="btn" type="submit" id="changeBtn">Update password</button>
+            <div id="changeMsg" class="msg"></div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Forgot password</h2>
+          <p class="hint">We’ll generate a 15-minute reset link for your account email. (Email delivery is not configured — the link is shown here so you can open it now.)</p>
+          <form id="forgotForm">
+            <label for="email">Account email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+            <button class="btn secondary" type="submit" id="forgotBtn">Generate reset link</button>
+            <div id="forgotMsg" class="msg"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="resetModal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+    <div class="modal">
+      <h3 id="resetModalTitle">Password reset link</h3>
+      <p class="hint" style="margin-bottom:0;">Open this link within 15 minutes. Keep it private.</p>
+      <div class="url" id="resetUrl"></div>
+      <div class="modal-actions">
+        <button class="btn" type="button" id="copyReset">Copy link</button>
+        <button class="btn secondary" type="button" id="openReset">Open</button>
+        <button class="btn secondary" type="button" id="closeReset">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function readToken() {
+      const keys = ["cms_token", "token", "jwt", "authToken"];
+      for (const store of [sessionStorage, localStorage]) {
+        try {
+          for (const key of keys) {
+            const v = store.getItem(key);
+            if (v && v.length > 20) return v;
+          }
+        } catch (_) {}
+      }
+      return null;
+    }
+
+    function scorePassword(pw) {
+      let s = 0;
+      if (!pw) return 0;
+      if (pw.length >= 8) s += 1;
+      if (pw.length >= 12) s += 1;
+      if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s += 1;
+      if (/[0-9]/.test(pw)) s += 1;
+      if (/[^A-Za-z0-9]/.test(pw)) s += 1;
+      return Math.min(s, 4);
+    }
+
+    function paintStrength(pw) {
+      const s = scorePassword(pw);
+      const bar = document.getElementById("strengthBar");
+      const label = document.getElementById("strengthLabel");
+      const colors = ["#c53030", "#dd6b20", "#d69e2e", "#38a169", "#276749"];
+      const labels = ["Too weak", "Weak", "Fair", "Good", "Strong"];
+      bar.style.width = (s / 4) * 100 + "%";
+      bar.style.background = colors[s];
+      label.textContent = pw ? labels[s] : "";
+    }
+
+    function showMsg(el, text, ok) {
+      el.textContent = text;
+      el.className = "msg show " + (ok ? "ok" : "error");
+    }
+
+    function showResetModal(url) {
+      document.getElementById("resetUrl").textContent = url;
+      document.getElementById("resetModal").classList.add("show");
+      document.getElementById("openReset").onclick = () => { window.location.href = url; };
+      document.getElementById("copyReset").onclick = async () => {
+        try { await navigator.clipboard.writeText(url); } catch (_) {}
+      };
+      document.getElementById("closeReset").onclick = () => {
+        document.getElementById("resetModal").classList.remove("show");
+      };
+    }
+
+    async function requestForgot(email, msgEl, btn) {
+      btn.disabled = true;
+      msgEl.className = "msg";
+      try {
+        const res = await fetch("/api/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showMsg(msgEl, data.error || "Could not start reset", false);
+          return;
+        }
+        showMsg(msgEl, data.message || "Reset link generated.", true);
+        if (data.resetUrl) showResetModal(data.resetUrl);
+      } catch (_) {
+        showMsg(msgEl, "Network error. Try again.", false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    const token = readToken();
+    const gate = document.getElementById("gate");
+    const app = document.getElementById("app");
+    if (token) {
+      app.classList.add("show");
+    } else {
+      gate.classList.add("show");
+    }
+
+    document.getElementById("showForgotFromGate").addEventListener("click", () => {
+      document.getElementById("gateForgot").style.display = "block";
+    });
+    document.getElementById("gateForgotBtn").addEventListener("click", () => {
+      const email = document.getElementById("gateEmail").value.trim();
+      requestForgot(email, document.getElementById("gateForgotMsg"), document.getElementById("gateForgotBtn"));
+    });
+
+    document.getElementById("newPassword").addEventListener("input", (e) => paintStrength(e.target.value));
+
+    document.getElementById("changeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("changeMsg");
+      const btn = document.getElementById("changeBtn");
+      const currentPassword = document.getElementById("currentPassword").value;
+      const newPassword = document.getElementById("newPassword").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+      if (newPassword !== confirmPassword) {
+        showMsg(msg, "New passwords do not match.", false);
+        return;
+      }
+      const t = readToken();
+      if (!t) {
+        showMsg(msg, "Not signed in. Open /admin/ first.", false);
+        return;
+      }
+      btn.disabled = true;
+      msg.className = "msg";
+      try {
+        const res = await fetch("/api/change-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + t,
+          },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showMsg(msg, data.error || "Could not change password", false);
+          return;
+        }
+        showMsg(msg, data.message || "Password changed.", true);
+        try {
+          sessionStorage.removeItem("cms_token");
+          localStorage.removeItem("token");
+          localStorage.removeItem("jwt");
+          localStorage.removeItem("authToken");
+        } catch (_) {}
+      } catch (_) {
+        showMsg(msg, "Network error. Try again.", false);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("forgotForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      requestForgot(email, document.getElementById("forgotMsg"), document.getElementById("forgotBtn"));
+    });
+  </script>
+</body>
+</html>

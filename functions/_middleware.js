@@ -121,6 +121,18 @@ export async function onRequest(context) {
     }
   }
 
+  // Password-management Functions (functions/api/*.js) — let file routes handle them
+  const passwordApi = new Set([
+    "/api/change-password",
+    "/api/forgot-password",
+    "/api/reset-password",
+    "/api/verify-reset-token",
+  ]);
+  const apiPath = pathname.replace(/\/+$/, "") || "/";
+  if (passwordApi.has(apiPath)) {
+    return context.next();
+  }
+
   if (pathname === "/api" || pathname.startsWith("/api/")) {
     // Optional legacy Render proxy for old CMS modules (can be disabled)
     if (String(context.env.LEGACY_CMS_PROXY || "0") === "1") {
