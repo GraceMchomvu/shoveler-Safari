@@ -272,10 +272,17 @@ export async function handleEdgePocket(context) {
   const method = request.method.toUpperCase();
 
   if (!env.EDGE_KV) {
+    const envKeys = Object.keys(env || {}).filter(
+      (k) => !/SECRET|PASSWORD|TOKEN|PASS|KEY/i.test(k)
+    );
     return json(
       {
-        error: "EdgePocket not configured. Create KV namespace EDGE_KV and bind it to Pages.",
+        error:
+          "EDGE_KV binding is not visible to this deployment. In Pages → Settings → Functions → KV namespace bindings, bind variable name exactly EDGE_KV for Production, then Retry deployment.",
         code: "EDGE_KV_MISSING",
+        envKeys,
+        hasJwtSecret: Boolean(env.JWT_SECRET && String(env.JWT_SECRET).length >= 32),
+        hasSeedPassword: Boolean(env.SEED_ADMIN_PASSWORD),
       },
       503
     );
