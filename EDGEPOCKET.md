@@ -62,8 +62,10 @@ Login: `https://www.shovelersafari.com/admin/`
 
 ## Reset password later
 
-- Change it in Account UI (change-password), **or**
-- Delete KV key `edge:user:admin` and redeploy / login again with `SEED_ADMIN_PASSWORD`
+- Login with the exact `SEED_ADMIN_PASSWORD` (auto-heals a broken KV hash), **or**
+- `POST /api/auth/emergency-reset` with JSON:
+  `{ "secret": "<your JWT_SECRET>", "password": "YourNewPassword1" }`
+- Or set Pages secret `FORCE_SEED_ADMIN_PASSWORD=true`, Retry deploy, login once, then set it back to `false`
 
 ## Honest scope
 
