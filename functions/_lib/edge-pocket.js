@@ -61,13 +61,23 @@ function fromB64url(str) {
   return out;
 }
 
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  return crypto.subtle.digest("SHA-256", data);
+function bytesToHex(buf) {
+  const bytes = buf instanceof ArrayBuffer ? new Uint8Array(buf) : buf;
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function pbkdf2Hash(password, saltB64) {
-  const salt = fromB64url(saltB64);
+function hexToBytes(hex) {
+  const clean = String(hex || "").replace(/[^0-9a-f]/gi, "");
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+function seedPassword(env) {
+  return String(env.SEED_ADMIN_PASSWORD || env.ADMIN_PASSWORD || "").trim();
+}
+
+async function pbkdf2Hex(password, saltBytes) {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(password),
@@ -76,27 +86,47 @@ async function pbkdf2Hash(password, saltB64) {
     ["deriveBits"]
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
     keyMaterial,
     256
   );
-  return b64url(bits);
+  return bytesToHex(bits);
 }
 
 async function hashPassword(password) {
-  const salt = b64url(crypto.getRandomValues(new Uint8Array(16)));
-  const hash = await pbkdf2Hash(password, salt);
-  return `pbkdf2:100000:${salt}:${hash}`;
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await pbkdf2Hex(password, salt);
+  return `pbkdf2hex:100000:${bytesToHex(salt)}:${hash}`;
 }
 
 async function verifyPassword(password, stored) {
   if (!stored || !password) return false;
-  if (stored.startsWith("pbkdf2:")) {
-    const [, , salt, hash] = stored.split(":");
-    const next = await pbkdf2Hash(password, salt);
+  if (stored.startsWith("pbkdf2hex:")) {
+    const parts = stored.split(":");
+    const salt = hexToBytes(parts[2]);
+    const hash = parts[3];
+    const next = await pbkdf2Hex(password, salt);
     return timingSafeEqual(next, hash);
   }
-  // bootstrap: plain compare against env secret (upgraded on first login/change)
+  // Legacy b64url format from first EdgePocket build
+  if (stored.startsWith("pbkdf2:")) {
+    const parts = stored.split(":");
+    const salt = fromB64url(parts[2]);
+    const hash = parts[3];
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(password),
+      "PBKDF2",
+      false,
+      ["deriveBits"]
+    );
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+      keyMaterial,
+      256
+    );
+    return timingSafeEqual(b64url(bits), hash);
+  }
   return timingSafeEqual(password, stored);
 }
 
@@ -188,13 +218,25 @@ async function ensureUser(env) {
   const kv = env.EDGE_KV;
   if (!kv) throw new Error("EDGE_KV binding missing");
   let user = await kv.get(USER_KEY, "json");
+  const force =
+    String(env.FORCE_SEED_ADMIN_PASSWORD || "").toLowerCase() === "true" ||
+    env.FORCE_SEED_ADMIN_PASSWORD === "1";
+
+  const bootstrap = seedPassword(env) || "SafariAdmin2026!";
+  const email = (env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase().trim();
+
+  if (user && force) {
+    user.passwordHash = await hashPassword(bootstrap);
+    user.mustChangePassword = false;
+    user.email = email;
+    user.username = "admin";
+    user.active = true;
+    await kv.put(USER_KEY, JSON.stringify(user));
+    return user;
+  }
+
   if (user) return user;
 
-  const bootstrap =
-    env.SEED_ADMIN_PASSWORD ||
-    env.ADMIN_PASSWORD ||
-    "SafariAdmin2026!";
-  const email = (env.SEED_ADMIN_EMAIL || "victorkiungai@gmail.com").toLowerCase();
   user = {
     id: "edge-admin",
     email,
@@ -313,14 +355,36 @@ export async function handleEdgePocket(context) {
     const loginId = String(body.login || body.username || body.email || "")
       .trim()
       .toLowerCase();
-    const password = String(body.password || "");
+    const password = String(body.password || "").trim();
+    const seed = seedPassword(env);
     const user = await ensureUser(env);
-    const idOk = loginId === user.username || loginId === user.email;
-    const passOk = idOk && (await verifyPassword(password, user.passwordHash));
-    if (!passOk) return json({ error: "Invalid credentials" }, 401);
+    const idOk =
+      loginId === String(user.username || "").toLowerCase() ||
+      loginId === String(user.email || "").toLowerCase() ||
+      loginId === "admin";
 
-    // Upgrade plain bootstrap secrets to PBKDF2 after first successful login
-    if (!String(user.passwordHash).startsWith("pbkdf2:")) {
+    let passOk = idOk && (await verifyPassword(password, user.passwordHash));
+
+    // Heal stale/broken KV hash when typed password matches Cloudflare SEED_ADMIN_PASSWORD
+    if (!passOk && idOk && seed && password === seed) {
+      user.passwordHash = await hashPassword(password);
+      user.mustChangePassword = false;
+      await saveUser(env, user);
+      passOk = true;
+    }
+
+    if (!passOk) {
+      return json(
+        {
+          error: "Invalid credentials",
+          hint: "Use username admin and the exact SEED_ADMIN_PASSWORD from Cloudflare Pages secrets (copy-paste). Or POST /api/auth/emergency-reset with your JWT_SECRET.",
+        },
+        401
+      );
+    }
+
+    // Normalize to new hex hash format after success
+    if (!String(user.passwordHash).startsWith("pbkdf2hex:")) {
       user.passwordHash = await hashPassword(password);
       await saveUser(env, user);
     }
@@ -331,6 +395,37 @@ export async function handleEdgePocket(context) {
       200,
       { "set-cookie": cookieHeader(token) }
     );
+  }
+
+  if (path === "/api/auth/emergency-reset" && method === "POST") {
+    if (!(await rateLimit(env, clientIp(request)))) {
+      return json({ error: "Too many reset attempts. Try again later." }, 429);
+    }
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid body" }, 400);
+    }
+    const secret = String(body.secret || "").trim();
+    const jwt = String(env.JWT_SECRET || "").trim();
+    if (!jwt || secret.length < 32 || secret !== jwt) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    const newPassword = String(body.password || seedPassword(env) || "").trim();
+    if (newPassword.length < 10) {
+      return json({ error: "password must be at least 10 characters (or set SEED_ADMIN_PASSWORD)" }, 400);
+    }
+    const user = await ensureUser(env);
+    user.passwordHash = await hashPassword(newPassword);
+    user.mustChangePassword = false;
+    user.username = "admin";
+    await saveUser(env, user);
+    return json({
+      ok: true,
+      message: "Admin password reset. Login with username admin and the password you just set.",
+      username: "admin",
+    });
   }
 
   if (path === "/api/auth/logout" && method === "POST") {
