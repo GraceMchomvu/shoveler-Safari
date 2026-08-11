@@ -251,10 +251,10 @@
       ".shoveler-lang--beside-logo{margin-left:1.75rem}" +
       "@media (min-width:992px){.shoveler-lang--beside-logo{margin-left:2.25rem}}" +
       ".header-logo .shoveler-lang{align-self:center}" +
-      ".shoveler-nav-brand .shoveler-lang,.shoveler-nav-brand-col .shoveler-lang{margin-left:1.75rem}" +
+      ".shoveler-nav-brand{display:flex!important;align-items:center!important;gap:.65rem}" +
       ".shoveler-lang__btn{display:inline-flex;align-items:center;gap:.4rem;border:1px solid rgba(20,32,24,.16);" +
       "background:#fff;color:#142018;border-radius:999px;padding:.4rem .75rem;font:700 .78rem/1 'DM Sans',system-ui,sans-serif;" +
-      "cursor:pointer;letter-spacing:.03em;box-shadow:0 1px 4px rgba(0,0,0,.08)}" +
+      "cursor:pointer;letter-spacing:.03em;box-shadow:0 1px 4px rgba(0,0,0,.08);-webkit-tap-highlight-color:transparent}" +
       ".shoveler-lang__btn:hover{background:#e8f0ea;border-color:#2f6b3a}" +
       ".shoveler-lang__menu{display:none;position:absolute;top:calc(100% + .4rem);left:0;min-width:10rem;" +
       "background:#fffaf2;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.22);padding:.35rem;list-style:none;margin:0;z-index:100}" +
@@ -262,7 +262,18 @@
       ".shoveler-lang__menu button{width:100%;text-align:left;border:0;background:transparent;padding:.55rem .7rem;" +
       "border-radius:8px;font:600 .85rem/1.2 'DM Sans',system-ui,sans-serif;color:#142018;cursor:pointer}" +
       ".shoveler-lang__menu button:hover,.shoveler-lang__menu button[aria-current=true]{background:#e8f0ea;color:#2f6b3a}" +
-      "@media (max-width:991px){.shoveler-lang--beside-logo{margin-left:.85rem}.shoveler-lang__btn{padding:.35rem .65rem;font-size:.72rem}}";
+      ".shoveler-lang--drawer{display:flex;width:100%;justify-content:center;margin:0 0 1rem;position:relative}" +
+      ".shoveler-lang--drawer .shoveler-lang__menu{left:50%;right:auto;transform:translateX(-50%)}" +
+      ".shoveler-lang-row{display:flex;gap:.45rem;justify-content:center;flex-wrap:wrap;margin:0 0 1.1rem;padding:0 .25rem}" +
+      ".shoveler-lang-row button{border:1px solid rgba(20,32,24,.16);background:#fff;color:#142018;border-radius:999px;" +
+      "padding:.55rem .85rem;font:700 .8rem/1 'DM Sans',system-ui,sans-serif;cursor:pointer;min-width:3rem}" +
+      ".shoveler-lang-row button[aria-current=true],.shoveler-lang-row button:hover{background:#2f6b3a;color:#fff;border-color:#2f6b3a}" +
+      "@media (max-width:991px){" +
+      ".shoveler-lang--beside-logo{margin-left:.7rem!important;margin-right:auto!important}" +
+      ".vs-header .header-logo{overflow:visible!important}" +
+      ".shoveler-lang__btn{padding:.42rem .7rem;font-size:.75rem;min-height:2.4rem}" +
+      ".shoveler-nav-brand .shoveler-lang{margin-left:.55rem}" +
+      "}";
     document.head.appendChild(css);
   }
 
@@ -275,24 +286,32 @@
     ];
   }
 
+  function syncSwitcherUI(lang) {
+    var cur = labels().find(function (l) {
+      return l.code === lang;
+    });
+    document.querySelectorAll(".shoveler-lang").forEach(function (root) {
+      root.classList.remove("is-open");
+      var btn = root.querySelector(".shoveler-lang__btn span");
+      if (btn && cur) btn.textContent = cur.short;
+      var toggle = root.querySelector(".shoveler-lang__btn");
+      if (toggle) toggle.setAttribute("aria-expanded", "false");
+      root.querySelectorAll(".shoveler-lang__menu button").forEach(function (b) {
+        b.setAttribute("aria-current", b.dataset.lang === lang ? "true" : "false");
+      });
+    });
+    document.querySelectorAll(".shoveler-lang-row button").forEach(function (b) {
+      b.setAttribute("aria-current", b.dataset.lang === lang ? "true" : "false");
+    });
+  }
+
   function setLang(lang) {
     if (SUPPORTED.indexOf(lang) === -1) lang = "en";
     try {
       localStorage.setItem(STORAGE_KEY, lang);
     } catch (e) {}
     translateTree(lang);
-    var root = document.querySelector(".shoveler-lang");
-    if (root) {
-      root.classList.remove("is-open");
-      var cur = labels().find(function (l) {
-        return l.code === lang;
-      });
-      var btn = root.querySelector(".shoveler-lang__btn span");
-      if (btn && cur) btn.textContent = cur.short;
-      root.querySelectorAll(".shoveler-lang__menu button").forEach(function (b) {
-        b.setAttribute("aria-current", b.dataset.lang === lang ? "true" : "false");
-      });
-    }
+    syncSwitcherUI(lang);
     try {
       var url = new URL(location.href);
       if (lang === "en") url.searchParams.delete("lang");
@@ -301,10 +320,9 @@
     } catch (e) {}
   }
 
-  function mountSwitcher(lang) {
-    if (document.querySelector(".shoveler-lang")) return;
+  function buildSwitcher(lang, extraClass) {
     var wrap = document.createElement("div");
-    wrap.className = "shoveler-lang shoveler-lang--beside-logo";
+    wrap.className = "shoveler-lang " + (extraClass || "");
     wrap.setAttribute("data-i18n-skip", "1");
 
     var cur = labels().find(function (l) {
@@ -326,7 +344,8 @@
       b.dataset.lang = l.code;
       b.textContent = l.label;
       b.setAttribute("aria-current", l.code === lang ? "true" : "false");
-      b.addEventListener("click", function () {
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
         setLang(l.code);
       });
       li.appendChild(b);
@@ -336,45 +355,81 @@
     var toggle = wrap.querySelector(".shoveler-lang__btn");
     toggle.addEventListener("click", function (e) {
       e.stopPropagation();
+      document.querySelectorAll(".shoveler-lang.is-open").forEach(function (other) {
+        if (other !== wrap) other.classList.remove("is-open");
+      });
       var open = wrap.classList.toggle("is-open");
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
     });
-    document.addEventListener("click", function () {
-      wrap.classList.remove("is-open");
-      toggle.setAttribute("aria-expanded", "false");
+
+    return wrap;
+  }
+
+  function buildLangRow(lang) {
+    var row = document.createElement("div");
+    row.className = "shoveler-lang-row";
+    row.setAttribute("data-i18n-skip", "1");
+    row.setAttribute("role", "group");
+    row.setAttribute("aria-label", "Language");
+    labels().forEach(function (l) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.dataset.lang = l.code;
+      b.textContent = l.short;
+      b.setAttribute("aria-current", l.code === lang ? "true" : "false");
+      b.addEventListener("click", function () {
+        setLang(l.code);
+      });
+      row.appendChild(b);
     });
+    return row;
+  }
 
-    // Place a few inches after the logo in the sticky header bar
-    var headerLogo = document.querySelector(".sticky-wrapper .header-logo, .header-bottom .header-logo, .header-logo");
-    if (headerLogo) {
+  function mountSwitcher(lang) {
+    // 1) Main header — beside logo (desktop + mobile top bar)
+    var headerLogo = document.querySelector(
+      "main .sticky-wrapper .header-logo, main .header-bottom .header-logo, .vs-header .header-logo"
+    );
+    if (headerLogo && !headerLogo.querySelector(".shoveler-lang")) {
+      var wrap = buildSwitcher(lang, "shoveler-lang--beside-logo");
       var mobileActions = headerLogo.querySelector(".shoveler-nav-mobile-actions");
-      var logoAnchor = headerLogo.querySelector("a");
-      if (mobileActions) {
-        headerLogo.insertBefore(wrap, mobileActions);
-        return;
+      var logoAnchor = headerLogo.querySelector(":scope > a, a");
+      if (mobileActions) headerLogo.insertBefore(wrap, mobileActions);
+      else if (logoAnchor) logoAnchor.insertAdjacentElement("afterend", wrap);
+      else headerLogo.appendChild(wrap);
+    }
+
+    // 2) Sticky #navbars brand (mobile after scroll / home sticky)
+    var stickyBrand = document.querySelector("#navbars .shoveler-nav-brand");
+    if (stickyBrand && !stickyBrand.querySelector(".shoveler-lang")) {
+      stickyBrand.appendChild(buildSwitcher(lang, "shoveler-lang--navbars"));
+    }
+
+    // 3) Mobile slide-out drawer — big EN/FR/DE/IT taps under logo
+    var drawerMenu = document.querySelector(".vs-menu-wrapper .vs-mobile-menu");
+    var mobileLogo = document.querySelector(".vs-menu-wrapper .mobile-logo");
+    if (drawerMenu && !document.querySelector(".shoveler-lang-row")) {
+      var row = buildLangRow(lang);
+      if (mobileLogo && mobileLogo.nextSibling) {
+        mobileLogo.parentNode.insertBefore(row, mobileLogo.nextSibling);
+      } else if (drawerMenu.parentNode) {
+        drawerMenu.parentNode.insertBefore(row, drawerMenu);
+      } else {
+        drawerMenu.insertBefore(row, drawerMenu.firstChild);
       }
-      if (logoAnchor) {
-        logoAnchor.insertAdjacentElement("afterend", wrap);
-        return;
-      }
-      headerLogo.appendChild(wrap);
-      return;
     }
 
-    var brand = document.querySelector(".shoveler-nav-brand, .shoveler-nav-brand-col");
-    if (brand) {
-      brand.appendChild(wrap);
-      return;
-    }
-
-    // Fallback: still near top-left after any logo image
-    var anyLogo = document.querySelector("header a img.logo, header .logo img, .mobile-logo img");
-    if (anyLogo && anyLogo.closest("a")) {
-      anyLogo.closest("a").insertAdjacentElement("afterend", wrap);
-      return;
-    }
-
-    document.body.appendChild(wrap);
+    document.addEventListener(
+      "click",
+      function () {
+        document.querySelectorAll(".shoveler-lang.is-open").forEach(function (root) {
+          root.classList.remove("is-open");
+          var t = root.querySelector(".shoveler-lang__btn");
+          if (t) t.setAttribute("aria-expanded", "false");
+        });
+      },
+      true
+    );
   }
 
   function boot() {
